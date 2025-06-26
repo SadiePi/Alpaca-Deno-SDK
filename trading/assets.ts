@@ -1,8 +1,8 @@
 import { UUID } from "../common.ts";
 
-type ActiveStatus = "active" | "inactive";
-type AssetClass = "us_equity" | "us_option" | "crypto";
-type Exchange =
+export type ActiveStatus = "active" | "inactive";
+export type AssetClass = "us_equity" | "us_option" | "crypto";
+export type Exchange =
   | "AMEX"
   | "ARCA"
   | "BATS"
@@ -10,27 +10,27 @@ type Exchange =
   | "NASDAQ"
   | "NYSEARCA"
   | "OTC";
-type Attribute =
+export type Attribute =
   | "ptp_no_exception"
   | "ptp_with_exception"
   | "ipo"
   | "has_options"
   | "options_late_close";
-type ContractType = "call" | "put";
-type ContractStyle = "american" | "european";
-type TreasurySubtype =
+export type ContractType = "call" | "put";
+export type ContractStyle = "american" | "european";
+export type TreasurySubtype =
   | "bond"
   | "bill"
   | "note"
   | "strips"
   | "tips"
   | "floating";
-type BondStatus = "outstanding" | "matured" | "pre_issuance";
-type DeliverableType = "cash" | "equity";
-type SettlementType = "T+0" | "T+1" | "T+2" | "T+3" | "T+4" | "T+5";
-type SettlementMethod = "BTOB" | "CADF" | "CAFX" | "CCC";
-type CouponType = "fixed" | "floating" | "zero";
-type CouponFrequency =
+export type BondStatus = "outstanding" | "matured" | "pre_issuance";
+export type DeliverableType = "cash" | "equity";
+export type SettlementType = "T+0" | "T+1" | "T+2" | "T+3" | "T+4" | "T+5";
+export type SettlementMethod = "BTOB" | "CADF" | "CAFX" | "CCC";
+export type CouponType = "fixed" | "floating" | "zero";
+export type CouponFrequency =
   | "annual"
   | "semi_annual"
   | "quarterly"

@@ -12,7 +12,7 @@ import {
   RawTreasury,
   TreasuriesQuery,
 } from "../trading/assets.ts";
-import { OrderBody, OrdersQuery } from "../trading/orders.ts";
+import { Order, OrderBody, OrdersQuery } from "../trading/orders.ts";
 import AlpacaClient from "./base.ts";
 
 export default class AlpacaTradingClient extends AlpacaClient {
@@ -20,8 +20,8 @@ export default class AlpacaTradingClient extends AlpacaClient {
     super(alpaca);
   }
 
-  protected override getBaseURL(): string {
-    return this.alpaca.config.paper ? baseURLs.paper : baseURLs.live;
+  protected override getBaseAPI(): string {
+    return this.alpaca.config.paper ? "paper-api" : "live";
   }
 
   // Accounts
@@ -161,7 +161,28 @@ export default class AlpacaTradingClient extends AlpacaClient {
 
   // Orders
   async createOrder(_body: OrderBody) {}
-  async getOrders(_query: OrdersQuery) {}
+
+  async getOrders(query: OrdersQuery) {
+    const preparedQuery = { ...query } as QueryParams;
+    // if(query.after) preparedQuery.after = converted
+    // if(query.until) preparedQuery.until = converted
+    if (query.symbols) preparedQuery.symbols = query.symbols.join(",");
+
+    const response = await this.fetch("v2/orders", "GET", {
+      query: preparedQuery,
+    });
+
+    if (response.status !== 200) {
+      throw new Error(
+        `Get Orders: Unexpected response status: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const json = await response.json() as Order[];
+
+    return json.map(parseOrder);
+  }
+
   async deleteAllOrders() {}
   async getOrderByClientID(_query: unknown) {}
   async getOrder(_order_id: UUID, _query: OrdersQuery) {}
