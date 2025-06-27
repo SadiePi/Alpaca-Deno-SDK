@@ -1,4 +1,6 @@
-import { Currency, UUID } from "../common.ts";
+import { ClientModule } from "../clients/base.ts";
+import TradingClient from "../clients/trading.ts";
+import { Currency, UUID, validateUUID } from "../common.ts";
 
 /**
  * The various possible account status values.
@@ -39,7 +41,6 @@ export enum OptionsTradingLevel {
 
 /** Base account properties shared between raw and parsed account interfaces */
 export interface BaseAccount {
-  id: UUID;
   status: AccountStatus;
   currency: Currency;
   account_number: string;
@@ -59,6 +60,7 @@ export interface BaseAccount {
 }
 
 export interface RawAccount extends BaseAccount {
+  id: string;
   buying_power: string;
   regt_buying_power: string;
   daytrading_buying_power: string;
@@ -91,6 +93,7 @@ export interface RawAccount extends BaseAccount {
 }
 
 export interface Account extends BaseAccount {
+  id: UUID;
   raw: RawAccount;
   buying_power: number;
   regt_buying_power: number;
@@ -124,17 +127,18 @@ export interface Account extends BaseAccount {
 }
 
 export function parseAccount(account: RawAccount): Account {
+  if (!validateUUID(account.id)) throw new Error(`Invalid UUID: ${account.id}`);
+
   return {
     ...account,
     raw: account,
 
+    id: account.id,
     buying_power: parseFloat(account.buying_power),
     regt_buying_power: parseFloat(account.regt_buying_power),
     daytrading_buying_power: parseFloat(account.daytrading_buying_power),
     options_buying_power: parseFloat(account.options_buying_power),
-    non_marginable_buying_power: parseFloat(
-      account.non_marginable_buying_power,
-    ),
+    non_marginable_buying_power: parseFloat(account.non_marginable_buying_power),
     cash: parseFloat(account.cash),
     accrued_fees: parseFloat(account.accrued_fees),
     pending_transfer_in: parseFloat(account.pending_transfer_in ?? 0),
@@ -160,4 +164,20 @@ export function parseAccount(account: RawAccount): Account {
     position_market_value: parseFloat(account.position_market_value), // undocumented
     bod_dtbp: parseInt(account.bod_dtbp), // undocumented
   };
+}
+
+export default class TradingAccountModule extends ClientModule<TradingClient> {
+  async get() {
+    const response = await this.client.fetch("v2/account", "GET");
+    if (response.status !== 200)
+      throw new Error(`Get Account: Unexpected response status ${response.status} ${response.statusText}`);
+
+    const json = await response.json();
+    // TODO validate
+    return parseAccount(json as RawAccount);
+  }
+
+  _configs() {}
+  _config() {}
+  _activities() {}
 }

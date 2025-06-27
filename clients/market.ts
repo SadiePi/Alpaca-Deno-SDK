@@ -1,6 +1,6 @@
 import Alpaca from "../alpaca.ts";
 
-export default class AlpacaMarketClient {
+export default class MarketClient {
   constructor(private alpaca: Alpaca) {}
 
   // Stock

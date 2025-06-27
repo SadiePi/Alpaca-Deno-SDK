@@ -1,41 +1,20 @@
-import { UUID } from "../common.ts";
+import { ClientModule } from "../clients/base.ts";
+import TradingClient from "../clients/trading.ts";
+import { QueryParams, UUID } from "../common.ts";
 
 export type ActiveStatus = "active" | "inactive";
 export type AssetClass = "us_equity" | "us_option" | "crypto";
-export type Exchange =
-  | "AMEX"
-  | "ARCA"
-  | "BATS"
-  | "NYSE"
-  | "NASDAQ"
-  | "NYSEARCA"
-  | "OTC";
-export type Attribute =
-  | "ptp_no_exception"
-  | "ptp_with_exception"
-  | "ipo"
-  | "has_options"
-  | "options_late_close";
+export type Exchange = "AMEX" | "ARCA" | "BATS" | "NYSE" | "NASDAQ" | "NYSEARCA" | "OTC";
+export type Attribute = "ptp_no_exception" | "ptp_with_exception" | "ipo" | "has_options" | "options_late_close";
 export type ContractType = "call" | "put";
 export type ContractStyle = "american" | "european";
-export type TreasurySubtype =
-  | "bond"
-  | "bill"
-  | "note"
-  | "strips"
-  | "tips"
-  | "floating";
+export type TreasurySubtype = "bond" | "bill" | "note" | "strips" | "tips" | "floating";
 export type BondStatus = "outstanding" | "matured" | "pre_issuance";
 export type DeliverableType = "cash" | "equity";
 export type SettlementType = "T+0" | "T+1" | "T+2" | "T+3" | "T+4" | "T+5";
 export type SettlementMethod = "BTOB" | "CADF" | "CAFX" | "CCC";
 export type CouponType = "fixed" | "floating" | "zero";
-export type CouponFrequency =
-  | "annual"
-  | "semi_annual"
-  | "quarterly"
-  | "monthly"
-  | "zero";
+export type CouponFrequency = "annual" | "semi_annual" | "quarterly" | "monthly" | "zero";
 
 export interface AssetsQuery {
   status?: ActiveStatus;
@@ -234,4 +213,72 @@ export function parseTreasury(raw: RawTreasury): Treasury {
     // next_coupon_date: Temporal.PlainDate.from(raw.next_coupon_date),
     // last_coupon_date: Temporal.PlainDate.from(raw.last_coupon_date),
   };
+}
+
+export default class TradingAssetsModule extends ClientModule<TradingClient> {
+  async getAssets(query: AssetsQuery) {
+    const preparedQuery = { ...query } as QueryParams;
+    if (query.attributes) preparedQuery.attributes = query.attributes.join(",");
+
+    const response = await this.client.fetch("v2/assets", "GET", { query: preparedQuery });
+    if (response.status !== 200)
+      throw new Error(`Get Assets: Unexpected response status: ${response.status} ${response.statusText}`);
+
+    const json = (await response.json()) as RawAsset[];
+    // TODO validate
+    return json.map(parseAsset);
+  }
+
+  async getAsset(symbol_or_asset_id: string) {
+    const response = await this.client.fetch(`v2/assets/${symbol_or_asset_id}`, "GET");
+    if (response.status === 404) throw new Error(`Get Asset: 404 Not Found: ${symbol_or_asset_id}`);
+    if (response.status !== 200)
+      throw new Error(`Get Asset: Unexpected response status: ${response.status} ${response.statusText}`);
+
+    const json = (await response.json()) as RawAsset;
+    // TODO validate
+    return parseAsset(json);
+  }
+
+  async getOptionContracts(query: OptionContractsQuery) {
+    const preparedQuery = { ...query } as QueryParams;
+    if (query.underlying_symbols) preparedQuery.underlying_symbols = query.underlying_symbols.join(",");
+
+    const response = await this.client.fetch("v2/options/contracts", "GET", { query: preparedQuery });
+    if (response.status !== 200)
+      throw new Error(`Get Option Contracts: Unexpected response status: ${response.status} ${response.statusText}`);
+
+    const json = (await response.json()) as RawOptionContract[];
+    // TODO validate
+    return json.map(parseOptionContract);
+  }
+  async getOptionContract(symbol_or_id: string) {
+    const response = await this.client.fetch(`v2/options/contracts/${symbol_or_id}`, "GET");
+
+    if (response.status === 404) throw new Error(`Get Option Contract: 404 Not Found: ${symbol_or_id}`);
+    if (response.status !== 200)
+      throw new Error(`Get Option Contract: Unexpected response status: ${response.status} ${response.statusText}`);
+
+    const json = (await response.json()) as RawOptionContract;
+    // TODO validate
+    return parseOptionContract(json);
+  }
+
+  async getTreasuries(query: TreasuriesQuery) {
+    const preparedQuery = { ...query } as QueryParams;
+    if (query.cusips) preparedQuery.cusips = query.cusips.join(",");
+    if (query.isins) preparedQuery.isins = query.isins.join(",");
+
+    const response = await this.client.fetch("v2/treasuries", "GET", { query: preparedQuery });
+    if (response.status === 400) throw new Error(`Get Treasuries: 400 Bad Request: ${response.statusText}`);
+    if (response.status === 403) throw new Error(`Get Treasuries: 403 Forbidden: ${response.statusText}`);
+    if (response.status === 429) throw new Error(`Get Treasuries: 429 Too Many Requests: ${response.statusText}`);
+    if (response.status === 500) throw new Error(`Get Treasuries: 500 Internal Server Error: ${response.statusText}`);
+    if (response.status !== 200)
+      throw new Error(`Get Treasuries: Unexpected response status: ${response.status} ${response.statusText}`);
+
+    const json = (await response.json()) as RawTreasury[];
+    // TODO validate
+    return json.map(parseTreasury);
+  }
 }

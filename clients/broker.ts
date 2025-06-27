@@ -1,6 +1,6 @@
 import Alpaca from "../alpaca.ts";
 
-export default class AlpacaBrokerClient {
+export default class BrokerClient {
   constructor(private alpaca: Alpaca) {}
 
   // Accounts
