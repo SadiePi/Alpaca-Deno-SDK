@@ -1,6 +1,6 @@
-import { ClientModule } from "../clients/base.ts";
-import TradingClient from "../clients/trading.ts";
-import { Currency, UUID, validateUUID } from "../common.ts";
+import { ClientModule } from "../client.ts";
+import { Currency } from "../common.ts";
+import { From, parse, Parsed, ParsingSchema, Raw } from "../parsing.ts";
 
 /**
  * The various possible account status values.
@@ -15,14 +15,15 @@ import { Currency, UUID, validateUUID } from "../common.ts";
  * - ACTIVE: The account is active for trading
  * - REJECTED: The account application has been rejected
  */
-export type AccountStatus =
-  | "ONBOARDING"
-  | "SUBMISSION_FAILED"
-  | "SUBMITTED"
-  | "ACCOUNT_UPDATED"
-  | "APPROVAL_PENDING"
-  | "ACTIVE"
-  | "REJECTED";
+export enum AccountStatus {
+  ONBOARDING = "ONBOARDING",
+  SUBMISSION_FAILED = "SUBMISSION_FAILED",
+  SUBMITTED = "SUBMITTED",
+  ACCOUNT_UPDATED = "ACCOUNT_UPDATED",
+  APPROVAL_PENDING = "APPROVAL_PENDING",
+  ACTIVE = "ACTIVE",
+  REJECTED = "REJECTED",
+}
 
 /** Undocumented */
 export type CryptoTier = 0 | 1 | 2 | 3;
@@ -39,142 +40,71 @@ export enum OptionsTradingLevel {
   SPREADS_STRADDLES = 3,
 }
 
-/** Base account properties shared between raw and parsed account interfaces */
-export interface BaseAccount {
-  status: AccountStatus;
-  currency: Currency;
-  account_number: string;
-  pattern_day_trader: boolean;
-  crypto_tier: CryptoTier;
-  trading_blocked: boolean;
-  transfers_blocked: boolean;
-  options_trading_level: OptionsTradingLevel;
-  account_blocked: boolean;
-  trade_suspended_by_user: boolean;
-  shorting_enabled: boolean;
-  daytrade_count: number;
+const AccountSchema = {
+  id: From.string.uuid,
+  buying_power: From.string.float,
+  regt_buying_power: From.string.float,
+  daytrading_buying_power: From.string.float,
+  options_buying_power: From.string.float,
+  non_marginable_buying_power: From.string.float,
+  cash: From.string.float,
+  accrued_fees: From.string.float,
+  pending_transfer_in: From.string.float,
+  multiplier: From.string.int,
+  equity: From.string.float,
+  last_equity: From.string.float,
+  long_market_value: From.string.float,
+  short_market_value: From.string.float,
+  initial_margin: From.string.float,
+  maintenance_margin: From.string.float,
+  last_maintenance_margin: From.string.float,
+  sma: From.string.float,
+  intraday_adjustments: From.string.int,
+  pending_reg_taf_fees: From.string.float,
 
-  admin_configuration: unknown; // undocumented
-  user_configurations: unknown; // undocumented
-  crypto_status: unknown; // undocumented
-}
-
-export interface RawAccount extends BaseAccount {
-  id: string;
-  buying_power: string;
-  regt_buying_power: string;
-  daytrading_buying_power: string;
-  options_buying_power: string;
-  non_marginable_buying_power: string;
-  cash: string;
-  accrued_fees: string;
-  pending_transfer_in: string;
-  multiplier: string;
-  equity: string;
-  last_equity: string;
-  long_market_value: string;
-  short_market_value: string;
-  maintenance_margin: string;
-  last_maintenance_margin: string;
-  sma: string;
-  intraday_adjustments: string;
-  pending_reg_taf_fees: string;
-  initial_margin: string;
-
-  portfolio_value: string; // deprecated, see `equity`
-
-  // created_at: string; // unused?
-  // pending_transfer_out: string; // unused?
-  // balance_asof: string; // unused?
-
-  position_market_value: string; // undocumented
-  effective_buying_power: string; // undocumented
-  bod_dtbp: string; // undocumented
-}
-
-export interface Account extends BaseAccount {
-  id: UUID;
-  raw: RawAccount;
-  buying_power: number;
-  regt_buying_power: number;
-  daytrading_buying_power: number;
-  options_buying_power: number;
-  non_marginable_buying_power: number;
-  cash: number;
-  accrued_fees: number;
-  pending_transfer_in: number;
-  multiplier: number;
-  equity: number;
-  last_equity: number;
-  long_market_value: number;
-  short_market_value: number;
-  initial_margin: number;
-  maintenance_margin: number;
-  last_maintenance_margin: number;
-  sma: number;
-  intraday_adjustments: number;
-  pending_reg_taf_fees: number;
-
-  portfolio_value: number; // deprecated, see `equity`
+  portfolio_value: From.string.float, // deprecated, see `equity`
 
   // created_at: Temporal.PlainDateTime; // unused?
   // pending_transfer_out: number; // unused?
   // balance_asof: Temporal.PlainDate; // unused?
 
-  effective_buying_power: number; // undocumented
-  position_market_value: number; // undocumented
-  bod_dtbp: number; // undocumented
-}
+  effective_buying_power: From.string.float, // undocumented
+  position_market_value: From.string.float, // undocumented
+  bod_dtbp: From.string.float, // undocumented
 
-export function parseAccount(account: RawAccount): Account {
-  if (!validateUUID(account.id)) throw new Error(`Invalid UUID: ${account.id}`);
+  status: From.string.enum(AccountStatus),
+  currency: From.string.enum(Currency),
+  account_number: From.I<string>(),
 
-  return {
-    ...account,
-    raw: account,
+  pattern_day_trader: From.I<boolean>(),
+  // crypto_tier: CryptoTier;
+  trading_blocked: From.I<boolean>(),
+  transfers_blocked: From.I<boolean>(),
+  options_trading_level: From.string.enum(OptionsTradingLevel),
+  account_blocked: From.I<boolean>(),
+  trade_suspended_by_user: From.I<boolean>(),
+  shorting_enabled: From.I<boolean>(),
+  daytrade_count: From.I<number>(),
+  // admin_configuration: unknown; // undocumented
+  // user_configurations: unknown; // undocumented
+  // crypto_status: unknown; // undocumented
+} as const satisfies ParsingSchema;
 
-    id: account.id,
-    buying_power: parseFloat(account.buying_power),
-    regt_buying_power: parseFloat(account.regt_buying_power),
-    daytrading_buying_power: parseFloat(account.daytrading_buying_power),
-    options_buying_power: parseFloat(account.options_buying_power),
-    non_marginable_buying_power: parseFloat(account.non_marginable_buying_power),
-    cash: parseFloat(account.cash),
-    accrued_fees: parseFloat(account.accrued_fees),
-    pending_transfer_in: parseFloat(account.pending_transfer_in ?? 0),
-    multiplier: parseFloat(account.multiplier),
-    equity: parseFloat(account.equity),
-    last_equity: parseFloat(account.last_equity),
-    long_market_value: parseFloat(account.long_market_value),
-    short_market_value: parseFloat(account.short_market_value),
-    initial_margin: parseFloat(account.initial_margin),
-    maintenance_margin: parseFloat(account.maintenance_margin),
-    last_maintenance_margin: parseFloat(account.last_maintenance_margin),
-    sma: parseFloat(account.sma),
-    intraday_adjustments: parseFloat(account.intraday_adjustments),
-    pending_reg_taf_fees: parseFloat(account.pending_reg_taf_fees),
+export type RawAccount = Raw<typeof AccountSchema>;
+export type Account = Parsed<typeof AccountSchema>;
 
-    portfolio_value: parseFloat(account.portfolio_value), // deprecated
-
-    // created_at: Temporal.PlainDateTime.from(account.created_at), // unused?
-    // balance_asof: Temporal.PlainDate.from(account.balance_asof), // unused?
-    // pending_transfer_out: parseFloat(account.pending_transfer_out), // unused?
-
-    effective_buying_power: parseFloat(account.effective_buying_power), // undocumented
-    position_market_value: parseFloat(account.position_market_value), // undocumented
-    bod_dtbp: parseInt(account.bod_dtbp), // undocumented
-  };
-}
-
-export default class TradingAccountModule extends ClientModule<TradingClient> {
-  async get() {
+export default class TradingAccountModule extends ClientModule {
+  async get(): Promise<Account> {
     const response = await this.client.fetch("v2/account", "GET");
-    if (response.status !== 200)
-      throw new Error(`Get Account: Unexpected response status ${response.status} ${response.statusText}`);
+    if (response.status !== 200) {
+      throw new Error(
+        `Get Account: Unexpected ${response.status} ${response.statusText}`,
+      );
+    }
 
     const json = await response.json();
     // TODO validate
-    return parseAccount(json as RawAccount);
+    return parse(AccountSchema, json as RawAccount);
   }
 
   _configs() {}

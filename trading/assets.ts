@@ -1,20 +1,96 @@
-import { ClientModule } from "../clients/base.ts";
-import TradingClient from "../clients/trading.ts";
-import { QueryParams, UUID } from "../common.ts";
+import { ClientModule } from "../client.ts";
+import { QueryParams } from "../common.ts";
+import { Parsed, ParsingSchema, Raw } from "../parsing.ts";
+import { From, parse } from "../parsing.ts";
 
-export type ActiveStatus = "active" | "inactive";
-export type AssetClass = "us_equity" | "us_option" | "crypto";
-export type Exchange = "AMEX" | "ARCA" | "BATS" | "NYSE" | "NASDAQ" | "NYSEARCA" | "OTC";
-export type Attribute = "ptp_no_exception" | "ptp_with_exception" | "ipo" | "has_options" | "options_late_close";
-export type ContractType = "call" | "put";
-export type ContractStyle = "american" | "european";
-export type TreasurySubtype = "bond" | "bill" | "note" | "strips" | "tips" | "floating";
-export type BondStatus = "outstanding" | "matured" | "pre_issuance";
-export type DeliverableType = "cash" | "equity";
-export type SettlementType = "T+0" | "T+1" | "T+2" | "T+3" | "T+4" | "T+5";
-export type SettlementMethod = "BTOB" | "CADF" | "CAFX" | "CCC";
-export type CouponType = "fixed" | "floating" | "zero";
-export type CouponFrequency = "annual" | "semi_annual" | "quarterly" | "monthly" | "zero";
+export enum ActiveStatus {
+  Active = "active",
+  Inactive = "inactive",
+}
+
+export enum AssetClass {
+  UsEquity = "us_equity",
+  UsOption = "us_option",
+  Crypto = "crypto",
+}
+
+export enum Exchange {
+  AMEX = "AMEX",
+  ARCA = "ARCA",
+  BATS = "BATS",
+  NYSE = "NYSE",
+  NASDAQ = "NASDAQ",
+  NYSEARCA = "NYSEARCA",
+  OTC = "OTC",
+}
+
+export enum Attribute {
+  PtpNoException = "ptp_no_exception",
+  PtpWithException = "ptp_with_exception",
+  IPO = "ipo",
+  HasOptions = "has_options",
+  OptionsLateClose = "options_late_close",
+}
+
+export enum ContractType {
+  Call = "call",
+  Put = "put",
+}
+
+export enum ContractStyle {
+  American = "american",
+  European = "european",
+}
+
+export enum TreasurySubtype {
+  Bond = "bond",
+  Bill = "bill",
+  Note = "note",
+  Strips = "strips",
+  Tips = "tips",
+  Floating = "floating",
+}
+
+export enum BondStatus {
+  Outstanding = "outstanding",
+  Matured = "matured",
+  PreIssuance = "pre_issuance",
+}
+
+export enum DeliverableType {
+  Cash = "cash",
+  Equity = "equity",
+}
+
+export enum SettlementType {
+  T0 = "T+0",
+  T1 = "T+1",
+  T2 = "T+2",
+  T3 = "T+3",
+  T4 = "T+4",
+  T5 = "T+5",
+}
+
+export enum SettlementMethod {
+  BTOB = "BTOB",
+  CADF = "CADF",
+  CAFX = "CAFX",
+  CCC = "CCC",
+}
+
+export enum CouponType {
+  Fixed = "fixed",
+  Floating = "floating",
+  Zero = "zero",
+}
+
+export enum CouponFrequency {
+  Annual = "annual",
+  SemiAnnual = "semi_annual",
+  Quarterly = "quarterly",
+  Monthly = "monthly",
+  Zero = "zero",
+}
 
 export interface AssetsQuery {
   status?: ActiveStatus;
@@ -47,221 +123,163 @@ export interface TreasuriesQuery {
   isins?: string[];
 }
 
-interface BaseAsset {
-  id: UUID;
-  class: AssetClass;
-  cusip: string | null;
-  exchange: Exchange;
-  symbol: string;
-  name: string;
-  status: ActiveStatus;
-  tradable: boolean;
-  marginable: boolean;
-  shortable: boolean;
-  easy_to_borrow: boolean;
-  fractionable: boolean;
-  // maintenance_margin_requirement: number; // deprecated, see margin_requirement_long or margin_requirement_short
-  attributes: Attribute[];
-}
+const AssetSchema = {
+  id: From.string.uuid,
+  class: From.string.enum(AssetClass),
+  cusip: From.I<string | null>(),
+  exchange: From.string.enum(Exchange),
+  symbol: From.I<string>(),
+  name: From.I<string>(),
+  status: From.string.enum(ActiveStatus),
+  tradable: From.I<boolean>(),
+  marginable: From.I<boolean>(),
+  shortable: From.I<boolean>(),
+  easy_to_borrow: From.I<boolean>(),
+  fractionable: From.I<boolean>(),
+  // maintenance_margin_requirement: From.string.float, // deprecated, see margin_requirement_long or margin_requirement_short
+  attributes: From.I<Attribute[]>(),
+  margin_requirement_long: From.string.float,
+  margin_requirement_short: From.string.float,
+} as const satisfies ParsingSchema;
+export type RawAsset = Raw<typeof AssetSchema>;
+export type Asset = Parsed<typeof AssetSchema>;
 
-export interface RawAsset extends BaseAsset {
-  margin_requirement_long: string; // parse to number
-  margin_requirement_short: string; // parse to number
-}
+const DeliverableSchema = {
+  type: From.string.enum(DeliverableType),
+  symbol: From.I<string>(),
+  asset_id: From.I<string | null>(),
+  settlement_type: From.string.enum(SettlementType),
+  settlement_method: From.string.enum(SettlementMethod),
+  delayed_settlement: From.I<boolean>(),
+  amount: From.string.float,
+  allocation_percentage: From.string.float,
+} as const satisfies ParsingSchema;
+export type RawDeliverable = Raw<typeof DeliverableSchema>;
+export type Deliverable = Parsed<typeof DeliverableSchema>;
 
-export interface Asset extends BaseAsset {
-  raw: RawAsset;
-  margin_requirement_long: number;
-  margin_requirement_short: number;
-}
+const OptionContractSchema = {
+  id: From.string.uuid,
+  symbol: From.I<string>(),
+  name: From.I<string>(),
+  status: From.string.enum(ActiveStatus),
+  tradable: From.I<boolean>(),
+  root_symbol: From.I<string>(),
+  underlying_symbol: From.I<string>(),
+  underlying_asset_id: From.I<string>(),
+  type: From.string.enum(ContractType),
+  style: From.string.enum(ContractStyle),
+  expiration_date: From.I<unknown>(), // date
+  strike_price: From.string.float,
+  multiplier: From.string.int,
+  size: From.string.float,
+  open_interest: From.string.float,
+  open_interest_date: From.I<unknown>(), // date
+  close_price: From.string.float,
+  close_price_date: From.I<unknown>(), // date
+  deliverables: From.I<RawDeliverable[]>(),
+} as const satisfies ParsingSchema;
+export type RawOptionContract = Raw<typeof OptionContractSchema>;
+export type OptionContract = Parsed<typeof OptionContractSchema>;
 
-export function parseAsset(raw: RawAsset): Asset {
-  return {
-    ...raw,
-    raw,
-    margin_requirement_long: parseFloat(raw.margin_requirement_long),
-    margin_requirement_short: parseFloat(raw.margin_requirement_short),
-  };
-}
+const TreasurySchema = {
+  cusip: From.I<string>(),
+  isin: From.I<string>(),
+  bond_status: From.string.enum(BondStatus),
+  tradable: From.I<boolean>(),
+  subtype: From.string.enum(TreasurySubtype),
+  description: From.I<string>(),
+  description_short: From.I<string>(),
+  close_price: From.string.float,
+  close_yield_to_maturity: From.string.float,
+  close_yield_to_worst: From.string.float,
+  coupon: From.string.float,
+  coupon_type: From.string.enum(CouponType),
+  coupon_frequency: From.string.enum(CouponFrequency),
+  issue_date: From.I<unknown>(), // date
+  maturity_date: From.I<unknown>(), // date
+  close_price_date: From.I<unknown>(), // date
+  first_coupon_date: From.I<unknown>(), // date
+  next_coupon_date: From.I<unknown>(), // date
+  last_coupon_date: From.I<unknown>(), // date
+} as const satisfies ParsingSchema;
+export type RawTreasury = Raw<typeof TreasurySchema>;
+export type Treasury = Parsed<typeof TreasurySchema>;
 
-interface BaseDeliverable {
-  type: DeliverableType;
-  symbol: string;
-  asset_id?: string;
-  settlement_type: SettlementType;
-  settlement_method: SettlementMethod;
-  delayed_settlement: boolean;
-}
-
-export interface RawDeliverable extends BaseDeliverable {
-  amount: string;
-  allocation_percentage: string;
-}
-
-export interface Deliverable extends BaseDeliverable {
-  raw: RawDeliverable;
-  amount: number;
-  allocation_percentage: number;
-}
-
-export function parseDeliverable(raw: RawDeliverable): Deliverable {
-  return {
-    ...raw,
-    raw,
-    amount: parseFloat(raw.amount),
-    allocation_percentage: parseFloat(raw.allocation_percentage),
-  };
-}
-
-interface BaseOptionContract {
-  id: string;
-  symbol: string;
-  name: string;
-  status: ActiveStatus;
-  tradable: boolean;
-  root_symbol: string;
-  underlying_symbol: string;
-  underlying_asset_id: string;
-  type: ContractType;
-  style: ContractStyle;
-}
-
-export interface RawOptionContract extends BaseOptionContract {
-  expiration_date: unknown; // date
-  strike_price: string;
-  multiplier: string;
-  size: string;
-  open_interest: string;
-  open_interest_date: unknown; // date
-  close_price: string;
-  close_price_date: unknown; // date
-  deliverables: RawDeliverable[];
-}
-
-export interface OptionContract extends BaseOptionContract {
-  raw: RawOptionContract;
-  // expiration_date: Temporal.PlainDate;
-  strike_price: number;
-  multiplier: number;
-  size: number;
-  open_interest: number;
-  // open_interest_date: Temporal.PlainDate;
-  close_price: number;
-  // close_price_date: Temporal.PlainDate;
-  deliverables: Deliverable[];
-}
-
-export function parseOptionContract(raw: RawOptionContract): OptionContract {
-  return {
-    ...raw,
-    raw,
-    // expiration_date: Temporal.PlainDate.from(raw.expiration_date),
-    strike_price: parseFloat(raw.strike_price),
-    multiplier: parseFloat(raw.multiplier),
-    size: parseFloat(raw.size),
-    open_interest: parseFloat(raw.open_interest),
-    // open_interest_date: Temporal.PlainDate.from(raw.open_interest_date),
-    close_price: parseFloat(raw.close_price),
-    // close_price_date: Temporal.PlainDate.from(raw.close_price_date),
-    deliverables: raw.deliverables.map(parseDeliverable),
-  };
-}
-
-interface BaseTreasury {
-  cusip: string;
-  isin: string;
-  bond_status: BondStatus;
-  tradable: boolean;
-  subtype: TreasurySubtype;
-  description: string;
-  description_short: string;
-  close_price: number;
-  close_yield_to_maturity: number;
-  close_yield_to_worst: number;
-  coupon: number;
-  coupon_type: CouponType;
-  coupon_frequency: CouponFrequency;
-}
-
-export interface RawTreasury extends BaseTreasury {
-  issue_date: unknown; // date
-  maturity_date: unknown; // date
-  close_price_date: unknown; // date
-  first_coupon_date: unknown; // date
-  next_coupon_date: unknown; // date
-  last_coupon_date: unknown; // date
-}
-
-export interface Treasury extends BaseTreasury {
-  raw: RawTreasury;
-  // issue_date: Temporal.PlainDate;
-  // maturity_date: Temporal.PlainDate;
-  // close_price_date: Temporal.PlainDate;
-  // first_coupon_date: Temporal.PlainDate;
-  // next_coupon_date: Temporal.PlainDate;
-  // last_coupon_date: Temporal.PlainDate;
-}
-
-export function parseTreasury(raw: RawTreasury): Treasury {
-  return {
-    ...raw,
-    raw,
-    // issue_date: Temporal.PlainDate.from(raw.issue_date),
-    // maturity_date: Temporal.PlainDate.from(raw.maturity_date),
-    // close_price_date: Temporal.PlainDate.from(raw.close_price_date),
-    // first_coupon_date: Temporal.PlainDate.from(raw.first_coupon_date),
-    // next_coupon_date: Temporal.PlainDate.from(raw.next_coupon_date),
-    // last_coupon_date: Temporal.PlainDate.from(raw.last_coupon_date),
-  };
-}
-
-export default class TradingAssetsModule extends ClientModule<TradingClient> {
+export default class TradingAssetsModule extends ClientModule {
   async getAssets(query: AssetsQuery) {
     const preparedQuery = { ...query } as QueryParams;
     if (query.attributes) preparedQuery.attributes = query.attributes.join(",");
 
-    const response = await this.client.fetch("v2/assets", "GET", { query: preparedQuery });
-    if (response.status !== 200)
-      throw new Error(`Get Assets: Unexpected response status: ${response.status} ${response.statusText}`);
+    const response = await this.client.fetch("v2/assets", "GET", {
+      query: preparedQuery,
+    });
+    if (response.status !== 200) {
+      throw new Error(
+        `Get Assets: Unexpected response status: ${response.status} ${response.statusText}`,
+      );
+    }
 
     const json = (await response.json()) as RawAsset[];
     // TODO validate
-    return json.map(parseAsset);
+    return json.map((asset) => parse(AssetSchema, asset));
   }
 
   async getAsset(symbol_or_asset_id: string) {
-    const response = await this.client.fetch(`v2/assets/${symbol_or_asset_id}`, "GET");
-    if (response.status === 404) throw new Error(`Get Asset: 404 Not Found: ${symbol_or_asset_id}`);
-    if (response.status !== 200)
-      throw new Error(`Get Asset: Unexpected response status: ${response.status} ${response.statusText}`);
+    const response = await this.client.fetch(
+      `v2/assets/${symbol_or_asset_id}`,
+      "GET",
+    );
+    if (response.status === 404) {
+      throw new Error(`Get Asset: 404 Not Found: ${symbol_or_asset_id}`);
+    }
+    if (response.status !== 200) {
+      throw new Error(
+        `Get Asset: Unexpected response status: ${response.status} ${response.statusText}`,
+      );
+    }
 
     const json = (await response.json()) as RawAsset;
     // TODO validate
-    return parseAsset(json);
+    return parse(AssetSchema, json);
   }
 
   async getOptionContracts(query: OptionContractsQuery) {
     const preparedQuery = { ...query } as QueryParams;
-    if (query.underlying_symbols) preparedQuery.underlying_symbols = query.underlying_symbols.join(",");
+    if (query.underlying_symbols) {
+      preparedQuery.underlying_symbols = query.underlying_symbols.join(",");
+    }
 
-    const response = await this.client.fetch("v2/options/contracts", "GET", { query: preparedQuery });
-    if (response.status !== 200)
-      throw new Error(`Get Option Contracts: Unexpected response status: ${response.status} ${response.statusText}`);
+    const response = await this.client.fetch("v2/options/contracts", "GET", {
+      query: preparedQuery,
+    });
+    if (response.status !== 200) {
+      throw new Error(
+        `Get Option Contracts: Unexpected response status: ${response.status} ${response.statusText}`,
+      );
+    }
 
     const json = (await response.json()) as RawOptionContract[];
     // TODO validate
-    return json.map(parseOptionContract);
+    return json.map((contract) => parse(OptionContractSchema, contract));
   }
   async getOptionContract(symbol_or_id: string) {
-    const response = await this.client.fetch(`v2/options/contracts/${symbol_or_id}`, "GET");
+    const response = await this.client.fetch(
+      `v2/options/contracts/${symbol_or_id}`,
+      "GET",
+    );
 
-    if (response.status === 404) throw new Error(`Get Option Contract: 404 Not Found: ${symbol_or_id}`);
-    if (response.status !== 200)
-      throw new Error(`Get Option Contract: Unexpected response status: ${response.status} ${response.statusText}`);
+    if (response.status === 404) {
+      throw new Error(`Get Option Contract: 404 Not Found: ${symbol_or_id}`);
+    }
+    if (response.status !== 200) {
+      throw new Error(
+        `Get Option Contract: Unexpected response status: ${response.status} ${response.statusText}`,
+      );
+    }
 
     const json = (await response.json()) as RawOptionContract;
     // TODO validate
-    return parseOptionContract(json);
+    return parse(OptionContractSchema, json);
   }
 
   async getTreasuries(query: TreasuriesQuery) {
@@ -269,16 +287,35 @@ export default class TradingAssetsModule extends ClientModule<TradingClient> {
     if (query.cusips) preparedQuery.cusips = query.cusips.join(",");
     if (query.isins) preparedQuery.isins = query.isins.join(",");
 
-    const response = await this.client.fetch("v2/treasuries", "GET", { query: preparedQuery });
-    if (response.status === 400) throw new Error(`Get Treasuries: 400 Bad Request: ${response.statusText}`);
-    if (response.status === 403) throw new Error(`Get Treasuries: 403 Forbidden: ${response.statusText}`);
-    if (response.status === 429) throw new Error(`Get Treasuries: 429 Too Many Requests: ${response.statusText}`);
-    if (response.status === 500) throw new Error(`Get Treasuries: 500 Internal Server Error: ${response.statusText}`);
-    if (response.status !== 200)
-      throw new Error(`Get Treasuries: Unexpected response status: ${response.status} ${response.statusText}`);
+    const response = await this.client.fetch("v2/treasuries", "GET", {
+      query: preparedQuery,
+    });
+    if (response.status === 400) {
+      throw new Error(
+        `Get Treasuries: 400 Bad Request: ${response.statusText}`,
+      );
+    }
+    if (response.status === 403) {
+      throw new Error(`Get Treasuries: 403 Forbidden: ${response.statusText}`);
+    }
+    if (response.status === 429) {
+      throw new Error(
+        `Get Treasuries: 429 Too Many Requests: ${response.statusText}`,
+      );
+    }
+    if (response.status === 500) {
+      throw new Error(
+        `Get Treasuries: 500 Internal Server Error: ${response.statusText}`,
+      );
+    }
+    if (response.status !== 200) {
+      throw new Error(
+        `Get Treasuries: Unexpected response status: ${response.status} ${response.statusText}`,
+      );
+    }
 
     const json = (await response.json()) as RawTreasury[];
     // TODO validate
-    return json.map(parseTreasury);
+    return json.map((treasury) => parse(TreasurySchema, treasury));
   }
 }

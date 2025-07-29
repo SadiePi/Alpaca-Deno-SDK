@@ -1,6 +1,5 @@
-import { ClientModule } from "../clients/base.ts";
-import TradingClient from "../clients/trading.ts";
+import { ClientModule } from "../client.ts";
 
-export default class TradingCryptoModule extends ClientModule<TradingClient> {
+export default class TradingCryptoModule extends ClientModule {
   _foo() {}
 }

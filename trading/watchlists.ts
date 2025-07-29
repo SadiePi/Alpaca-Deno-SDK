@@ -1,7 +1,6 @@
-import { ClientModule } from "../clients/base.ts";
-import TradingClient from "../clients/trading.ts";
+import { ClientModule } from "../client.ts";
 
-export default class TradingWatchlistsModule extends ClientModule<TradingClient> {
+export default class TradingWatchlistsModule extends ClientModule {
   _all() {}
   _create() {}
   _get(_by: "id" | "name") {}
