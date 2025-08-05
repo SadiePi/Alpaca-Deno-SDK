@@ -1,6 +1,6 @@
 import { ClientModule } from "../client.ts";
 import { AssetClass, QueryParams } from "../common.ts";
-import { Morph, Parsed, Raw, UUID } from "../morph.ts";
+import { Z } from "../external.ts";
 
 export enum OrderClass {
   Simple = "simple",
@@ -68,10 +68,15 @@ export enum OrderStatus {
   Calculated = "calculated",
 }
 
-export type RawOrderLeg = unknown;
-export type OrderLeg = unknown;
-export type OrderTakeProfit = unknown;
-export type OrderStopLoss = unknown;
+export const OrderLegSchema = Z.unknown();
+export type RawOrderLeg = Z.input<typeof OrderLegSchema>;
+export type OrderLeg = Z.infer<typeof OrderLegSchema>;
+
+export const OrderTakeProfitSchema = Z.unknown();
+export type OrderTakeProfit = Z.infer<typeof OrderTakeProfitSchema>;
+
+export const OrderStopLossSchema = Z.unknown();
+export type OrderStopLoss = Z.infer<typeof OrderStopLossSchema>;
 
 export interface OrderBody {
   // TODO differentiate shapes
@@ -106,22 +111,22 @@ export interface OrdersQuery {
   asset_class?: AssetClass[];
 }
 
-export const ParseOrder = Morph.object.parse({
-  id: Morph.string.tagged.uuid,
-  client_order_id: Morph.I<string>(),
-  replaced_by: Morph.string.tagged.uuid,
-  replaces: Morph.string.tagged.uuid,
-  asset_id: Morph.string.tagged.uuid,
-  symbol: Morph.I<string>(),
-  asset_class: Morph.string.enum(AssetClass),
-  order_class: Morph.string.enum(OrderClass),
-  order_type: Morph.string.enum(OrderType), // deprecated, see type
-  type: Morph.string.enum(OrderType),
-  side: Morph.string.enum(OrderSide),
-  time_in_force: Morph.string.enum(TimeInForce),
-  status: Morph.string.enum(OrderStatus),
-  extended_hours: Morph.I<boolean>(),
-  position_intent: Morph.string.enum(PositionIntent),
+export const OrderSchema = Z.object({
+  id: Z.uuid(),
+  client_order_id: Z.string(),
+  replaced_by: Z.uuid(),
+  replaces: Z.uuid(),
+  asset_id: Z.uuid(),
+  symbol: Z.string(),
+  asset_class: Z.enum(AssetClass),
+  order_class: Z.enum(OrderClass),
+  order_type: Z.enum(OrderType), // deprecated, see type
+  type: Z.enum(OrderType),
+  side: Z.enum(OrderSide),
+  time_in_force: Z.enum(TimeInForce),
+  status: Z.enum(OrderStatus),
+  extended_hours: Z.boolean(),
+  position_intent: Z.enum(PositionIntent),
   // created_at: From.I<string>(), // date-time
   // updated_at: From.I<string>(), // date-time
   // submitted_at: From.I<string>(), // date-time
@@ -130,28 +135,28 @@ export const ParseOrder = Morph.object.parse({
   // canceled_at: From.I<string>(), // date-time
   // failed_at: From.I<string>(), // date-time
   // replaced_at: From.I<string>(), // date-time
-  notional: Morph.string.float, // deprecated, see qty
-  qty: Morph.string.float,
-  filled_qty: Morph.string.float,
-  filled_avg_price: Morph.string.float,
-  limit_price: Morph.string.float,
-  stop_price: Morph.string.float,
-  legs: Morph.I<RawOrderLeg[]>(),
-  trail_percent: Morph.string.float,
-  trail_price: Morph.string.float,
-  hwm: Morph.string.float,
+  notional: Z.coerce.number(), // deprecated, see qty
+  qty: Z.coerce.number(),
+  filled_qty: Z.coerce.number(),
+  filled_avg_price: Z.coerce.number(),
+  limit_price: Z.coerce.number(),
+  stop_price: Z.coerce.number(),
+  legs: Z.array(OrderLegSchema),
+  trail_percent: Z.coerce.number(),
+  trail_price: Z.coerce.number(),
+  hwm: Z.coerce.number(),
 });
 
-export type RawOrder = Raw<typeof ParseOrder>;
-export type Order = Parsed<typeof ParseOrder>;
+export type RawOrder = Z.input<typeof OrderSchema>;
+export type Order = Z.infer<typeof OrderSchema>;
 
-export const ParseDeleteOrderResponse = Morph.object.parse({
-  status: Morph.I<number>(),
-  id: Morph.string.tagged.uuid,
+export const DeleteOrderResponseSchema = Z.object({
+  status: Z.number(),
+  id: Z.string().uuid(),
 });
 
-export type RawDeleteOrderResponse = Raw<typeof ParseDeleteOrderResponse>;
-export type DeleteOrderResponse = Parsed<typeof ParseDeleteOrderResponse>;
+export type RawDeleteOrderResponse = Z.input<typeof DeleteOrderResponseSchema>;
+export type DeleteOrderResponse = Z.infer<typeof DeleteOrderResponseSchema>;
 
 export default class TradingOrdersModule extends ClientModule {
   async _create(_body: OrderBody) {}
@@ -166,7 +171,7 @@ export default class TradingOrdersModule extends ClientModule {
     if (response.status !== 200)
       throw new Error(`Get Orders: Undocumented response status: ${response.status} ${response.statusText}`);
 
-    return ((await response.json()) as RawOrder[]).map(ParseOrder);
+    return OrderSchema.array().parse(await response.json());
   }
 
   async deleteAll() {
@@ -174,7 +179,7 @@ export default class TradingOrdersModule extends ClientModule {
     if (response.status !== 207)
       throw new Error(`Delete All Orders: Undocumented response status: ${response.status} ${response.statusText}`);
 
-    const parsed = ((await response.json()) as RawDeleteOrderResponse[]).map(ParseDeleteOrderResponse);
+    const parsed = DeleteOrderResponseSchema.array().parse(await response.json());
     const errors = parsed
       .filter(order => order.status !== 200)
       .map(order => new Error(`Delete All Orders: Failed to delete order ${order.id}: ${order.status}`));
@@ -183,7 +188,7 @@ export default class TradingOrdersModule extends ClientModule {
     return parsed;
   }
 
-  async getByClientID(client_order_id: UUID) {
+  async getByClientID(client_order_id: string) {
     const preparedQuery: QueryParams = { client_order_id };
 
     const response = await this.client.fetch("v2/orders:by_client_order_id", "GET", { query: preparedQuery });
@@ -192,10 +197,10 @@ export default class TradingOrdersModule extends ClientModule {
         `Get Order by Client ID: Undocumented response status: ${response.status} ${response.statusText}`
       );
 
-    return ParseOrder(await response.json());
+    return OrderSchema.parse(await response.json());
   }
 
-  async get(order_id: UUID, nested?: boolean) {
+  async get(order_id: string, nested?: boolean) {
     const preparedQuery: QueryParams = {};
     if (nested) preparedQuery.nested = nested.toString();
 
@@ -203,9 +208,9 @@ export default class TradingOrdersModule extends ClientModule {
     if (response.status !== 200)
       throw new Error(`Get Order: Undocumented response status: ${response.status} ${response.statusText}`);
 
-    return ParseOrder(await response.json());
+    return OrderSchema.parse(await response.json());
   }
 
-  async _replace(_order_id: UUID, _body: OrderBody) {}
-  async _delete(_order_id: UUID) {}
+  async _replace(_order_id: string, _body: OrderBody) {}
+  async _delete(_order_id: string) {}
 }

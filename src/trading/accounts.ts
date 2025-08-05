@@ -1,6 +1,6 @@
 import { ClientModule } from "../client.ts";
 import { Currency } from "../common.ts";
-import { Morph, Parsed, Raw } from "../morph.ts";
+import { Z } from "../external.ts";
 
 /**
  * The various possible account status values.
@@ -40,58 +40,58 @@ export enum OptionsTradingLevel {
   SPREADS_STRADDLES = 3,
 }
 
-const ParseAccount = Morph.object.parse({
-  id: Morph.string.tagged.uuid,
-  buying_power: Morph.string.float,
-  regt_buying_power: Morph.string.float,
-  daytrading_buying_power: Morph.string.float,
-  options_buying_power: Morph.string.float,
-  non_marginable_buying_power: Morph.string.float,
-  cash: Morph.string.float,
-  accrued_fees: Morph.string.float,
-  pending_transfer_in: Morph.string.float,
-  multiplier: Morph.string.int,
-  equity: Morph.string.float,
-  last_equity: Morph.string.float,
-  long_market_value: Morph.string.float,
-  short_market_value: Morph.string.float,
-  initial_margin: Morph.string.float,
-  maintenance_margin: Morph.string.float,
-  last_maintenance_margin: Morph.string.float,
-  sma: Morph.string.float,
-  intraday_adjustments: Morph.string.int,
-  pending_reg_taf_fees: Morph.string.float,
+const AccountSchema = Z.object({
+  id: Z.uuid(),
+  buying_power: Z.coerce.number(),
+  regt_buying_power: Z.coerce.number(),
+  daytrading_buying_power: Z.coerce.number(),
+  options_buying_power: Z.coerce.number(),
+  non_marginable_buying_power: Z.coerce.number(),
+  cash: Z.coerce.number(),
+  accrued_fees: Z.coerce.number(),
+  pending_transfer_in: Z.coerce.number(),
+  multiplier: Z.coerce.number(),
+  equity: Z.coerce.number(),
+  last_equity: Z.coerce.number(),
+  long_market_value: Z.coerce.number(),
+  short_market_value: Z.coerce.number(),
+  initial_margin: Z.coerce.number(),
+  maintenance_margin: Z.coerce.number(),
+  last_maintenance_margin: Z.coerce.number(),
+  sma: Z.coerce.number(),
+  intraday_adjustments: Z.coerce.number(),
+  pending_reg_taf_fees: Z.coerce.number(),
 
-  portfolio_value: Morph.string.float, // deprecated, see `equity`
+  portfolio_value: Z.coerce.number(), // deprecated, see `equity`
 
   // created_at: Temporal.PlainDateTime; // unused?
   // pending_transfer_out: number; // unused?
   // balance_asof: Temporal.PlainDate; // unused?
 
-  effective_buying_power: Morph.string.float, // undocumented
-  position_market_value: Morph.string.float, // undocumented
-  bod_dtbp: Morph.string.float, // undocumented
+  effective_buying_power: Z.coerce.number(), // undocumented
+  position_market_value: Z.coerce.number(), // undocumented
+  bod_dtbp: Z.coerce.number(), // undocumented
 
-  status: Morph.string.enum(AccountStatus),
-  currency: Morph.string.enum(Currency),
-  account_number: Morph.I<string>(),
+  status: Z.enum(AccountStatus),
+  currency: Z.enum(Currency),
+  account_number: Z.string(),
 
-  pattern_day_trader: Morph.I<boolean>(),
+  pattern_day_trader: Z.boolean(),
   // crypto_tier: CryptoTier;
-  trading_blocked: Morph.I<boolean>(),
-  transfers_blocked: Morph.I<boolean>(),
-  options_trading_level: Morph.string.enum(OptionsTradingLevel),
-  account_blocked: Morph.I<boolean>(),
-  trade_suspended_by_user: Morph.I<boolean>(),
-  shorting_enabled: Morph.I<boolean>(),
-  daytrade_count: Morph.I<number>(),
+  trading_blocked: Z.boolean(),
+  transfers_blocked: Z.boolean(),
+  options_trading_level: Z.enum(OptionsTradingLevel),
+  account_blocked: Z.boolean(),
+  trade_suspended_by_user: Z.boolean(),
+  shorting_enabled: Z.boolean(),
+  daytrade_count: Z.number(),
   // admin_configuration: unknown; // undocumented
   // user_configurations: unknown; // undocumented
   // crypto_status: unknown; // undocumented
 });
 
-export type RawAccount = Raw<typeof ParseAccount>;
-export type Account = Parsed<typeof ParseAccount>;
+export type RawAccount = Z.input<typeof AccountSchema>;
+export type Account = Z.infer<typeof AccountSchema>;
 
 export default class TradingAccountModule extends ClientModule {
   async get(): Promise<Account> {
@@ -99,7 +99,7 @@ export default class TradingAccountModule extends ClientModule {
     if (response.status !== 200)
       throw new Error(`Get Account: Undocumented response status ${response.status} ${response.statusText}`);
 
-    return ParseAccount(await response.json());
+    return AccountSchema.parse(await response.json());
   }
 
   _configs() {}

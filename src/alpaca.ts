@@ -41,7 +41,7 @@ export default class Alpaca {
 
     if (data?.query) {
       const queryEntries = Object.entries(data.query);
-      queryEntries.forEach(([key, value]) => url.searchParams.set(key, String(value)));
+      queryEntries.forEach(([key, value]) => url.searchParams.set(key, value?.toString() ?? ""));
     }
 
     if (data?.body) {

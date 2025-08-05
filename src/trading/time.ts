@@ -1,57 +1,60 @@
 import { ClientModule } from "../client.ts";
-import { QueryParams } from "../common.ts";
-import { Morph, Parsed, Raw } from "../morph.ts";
+import { AlpacaDate, AlpacaDateSchema } from "../common.ts";
+import { Z } from "../external.ts";
 
 export enum CalendarDateType {
   TRADING,
   SETTLEMENT,
 }
 
-// const AlpacaDate = Morph.string.tagged.custom("alpaca-date", date => {)
-
-export const ParseCalendarDay = Morph.object.parse({
-  date: Morph.string.tagged.date,
-  open: Morph.string.tagged.time,
-  close: Morph.string.tagged.time,
-  settlement_date: Morph.string.tagged.date,
+export const CalendarDaySchema = Z.object({
+  date: Z.string(),
+  open: Z.string(),
+  close: Z.string(),
+  settlement_date: Z.string(),
 });
 
-export type RawCalendarDay = Raw<typeof ParseCalendarDay>;
-export type CalendarDay = Parsed<typeof ParseCalendarDay>;
+export type RawCalendarDay = Z.input<typeof CalendarDaySchema>;
+export type CalendarDay = Z.infer<typeof CalendarDaySchema>;
 
-export const ParseCalendar = Morph.array.map(ParseCalendarDay);
+export const CalendarSchema = Z.array(CalendarDaySchema);
 
-export type RawCalendar = Raw<typeof ParseCalendar>;
-export type Calendar = Parsed<typeof ParseCalendar>;
+export type RawCalendar = Z.input<typeof CalendarSchema>;
+export type Calendar = Z.infer<typeof CalendarSchema>;
 
-export const ParseClock = Morph.object.parse({
-  timestamp: Morph.string.temporal.time,
-  is_open: Morph.I<boolean>(),
-  next_open: Morph.string.temporal.time,
-  next_close: Morph.string.temporal.time,
+export const ClockSchema = Z.object({
+  timestamp: Z.string(),
+  is_open: Z.boolean(),
+  next_open: Z.string(),
+  next_close: Z.string(),
 });
 
-export type RawClock = Raw<typeof ParseClock>;
-export type Clock = Parsed<typeof ParseClock>;
+export type RawClock = Z.input<typeof ClockSchema>;
+export type Clock = Z.infer<typeof ClockSchema>;
+
+const CalendarQuerySchema = Z.object({
+  start: AlpacaDateSchema.optional(),
+  end: AlpacaDateSchema.optional(),
+  date_type: Z.enum(CalendarDateType).optional(),
+});
+
+type CalendarQueryInput = Z.input<typeof CalendarQuerySchema>;
 
 export interface CalendarQuery {
-  start?: Temporal.PlainDate;
-  end?: Temporal.PlainDate;
+  start?: AlpacaDate;
+  end?: AlpacaDate;
   date_type?: CalendarDateType;
 }
 
 export default class TradingTimeModule extends ClientModule {
-  async calendar(query?: CalendarQuery): Promise<Calendar> {
-    const preparedQuery: QueryParams = {};
-    if (query?.start) preparedQuery.start = query.start.toString();
-    if (query?.end) preparedQuery.end = query.end.toString();
-    if (query?.date_type) preparedQuery.date_type = query.date_type;
+  async calendar(query?: CalendarQueryInput): Promise<Calendar> {
+    const parsed = CalendarQuerySchema.parse(query ?? {});
 
-    const response = await this.client.fetch("v2/calendar", "GET", { query: preparedQuery });
+    const response = await this.client.fetch("v2/calendar", "GET", { query: parsed });
     if (response.status !== 200)
       throw new Error(`Get Calendar: Undocumented response status: ${response.status} ${response.statusText}`);
 
-    return ParseCalendar(await response.json());
+    return CalendarSchema.parse(await response.json());
   }
 
   async clock(): Promise<Clock> {
@@ -59,6 +62,6 @@ export default class TradingTimeModule extends ClientModule {
     if (response.status !== 200)
       throw new Error(`Get Clock: Undocumented response status: ${response.status} ${response.statusText}`);
 
-    return ParseClock(await response.json());
+    return ClockSchema.parse(await response.json());
   }
 }

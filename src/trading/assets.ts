@@ -1,6 +1,6 @@
 import { ClientModule } from "../client.ts";
 import { AssetClass, Exchange, QueryParams } from "../common.ts";
-import { Parsed, Raw, Morph } from "../morph.ts";
+import { Z } from "../external.ts";
 
 export enum ActiveStatus {
   Active = "active",
@@ -106,91 +106,91 @@ export interface TreasuriesQuery {
   isins?: string[];
 }
 
-export const ParseAsset = Morph.object.parse({
-  id: Morph.string.tagged.uuid,
-  class: Morph.string.enum(AssetClass),
-  cusip: Morph.I<string | null>(),
-  exchange: Morph.string.enum(Exchange),
-  symbol: Morph.I<string>(),
-  name: Morph.I<string>(),
-  status: Morph.string.enum(ActiveStatus),
-  tradable: Morph.I<boolean>(),
-  marginable: Morph.I<boolean>(),
-  shortable: Morph.I<boolean>(),
-  easy_to_borrow: Morph.I<boolean>(),
-  fractionable: Morph.I<boolean>(),
+export const AssetSchema = Z.object({
+  id: Z.uuid(),
+  class: Z.enum(AssetClass),
+  cusip: Z.string().nullable(),
+  exchange: Z.enum(Exchange),
+  symbol: Z.string(),
+  name: Z.string(),
+  status: Z.enum(ActiveStatus),
+  tradable: Z.boolean(),
+  marginable: Z.boolean(),
+  shortable: Z.boolean(),
+  easy_to_borrow: Z.boolean(),
+  fractionable: Z.boolean(),
   // maintenance_margin_requirement: From.string.float, // deprecated, see margin_requirement_long or margin_requirement_short
-  attributes: Morph.I<Attribute[]>(),
-  margin_requirement_long: Morph.string.float,
-  margin_requirement_short: Morph.string.float,
+  attributes: Z.array(Z.enum(Attribute)),
+  margin_requirement_long: Z.coerce.number(),
+  margin_requirement_short: Z.coerce.number(),
 });
 
-export type RawAsset = Raw<typeof ParseAsset>;
-export type Asset = Parsed<typeof ParseAsset>;
+export type RawAsset = Z.input<typeof AssetSchema>;
+export type Asset = Z.infer<typeof AssetSchema>;
 
-export const ParseDeliverable = Morph.object.parse({
-  type: Morph.string.enum(DeliverableType),
-  symbol: Morph.I<string>(),
-  asset_id: Morph.I<string | null>(),
-  settlement_type: Morph.string.enum(SettlementType),
-  settlement_method: Morph.string.enum(SettlementMethod),
-  delayed_settlement: Morph.I<boolean>(),
-  amount: Morph.string.float,
-  allocation_percentage: Morph.string.float,
+export const DeliverableSchema = Z.object({
+  type: Z.enum(DeliverableType),
+  symbol: Z.string(),
+  asset_id: Z.string().nullable(),
+  settlement_type: Z.enum(SettlementType),
+  settlement_method: Z.enum(SettlementMethod),
+  delayed_settlement: Z.boolean(),
+  amount: Z.coerce.number(),
+  allocation_percentage: Z.coerce.number(),
 });
 
-export type RawDeliverable = Raw<typeof ParseDeliverable>;
-export type Deliverable = Parsed<typeof ParseDeliverable>;
+export type RawDeliverable = Z.input<typeof DeliverableSchema>;
+export type Deliverable = Z.infer<typeof DeliverableSchema>;
 
-export const ParseOptionContract = Morph.object.parse({
-  id: Morph.string.tagged.uuid,
-  symbol: Morph.I<string>(),
-  name: Morph.I<string>(),
-  status: Morph.string.enum(ActiveStatus),
-  tradable: Morph.I<boolean>(),
-  root_symbol: Morph.I<string>(),
-  underlying_symbol: Morph.I<string>(),
-  underlying_asset_id: Morph.I<string>(),
-  type: Morph.string.enum(ContractType),
-  style: Morph.string.enum(ContractStyle),
-  expiration_date: Morph.I<unknown>(), // date
-  strike_price: Morph.string.float,
-  multiplier: Morph.string.int,
-  size: Morph.string.float,
-  open_interest: Morph.string.float,
-  open_interest_date: Morph.I<unknown>(), // date
-  close_price: Morph.string.float,
-  close_price_date: Morph.I<unknown>(), // date
-  deliverables: Morph.I<RawDeliverable[]>(),
+export const OptionContractSchema = Z.object({
+  id: Z.uuid(),
+  symbol: Z.string(),
+  name: Z.string(),
+  status: Z.enum(ActiveStatus),
+  tradable: Z.boolean(),
+  root_symbol: Z.string(),
+  underlying_symbol: Z.string(),
+  underlying_asset_id: Z.string(),
+  type: Z.enum(ContractType),
+  style: Z.enum(ContractStyle),
+  expiration_date: Z.unknown(), // date
+  strike_price: Z.coerce.number(),
+  multiplier: Z.coerce.number(),
+  size: Z.coerce.number(),
+  open_interest: Z.coerce.number(),
+  open_interest_date: Z.unknown(), // date
+  close_price: Z.coerce.number(),
+  close_price_date: Z.unknown(), // date
+  deliverables: Z.array(DeliverableSchema),
 });
 
-export type RawOptionContract = Raw<typeof ParseOptionContract>;
-export type OptionContract = Parsed<typeof ParseOptionContract>;
+export type RawOptionContract = Z.input<typeof OptionContractSchema>;
+export type OptionContract = Z.infer<typeof OptionContractSchema>;
 
-export const ParseTreasury = Morph.object.parse({
-  cusip: Morph.I<string>(),
-  isin: Morph.I<string>(),
-  bond_status: Morph.string.enum(BondStatus),
-  tradable: Morph.I<boolean>(),
-  subtype: Morph.string.enum(TreasurySubtype),
-  description: Morph.I<string>(),
-  description_short: Morph.I<string>(),
-  close_price: Morph.string.float,
-  close_yield_to_maturity: Morph.string.float,
-  close_yield_to_worst: Morph.string.float,
-  coupon: Morph.string.float,
-  coupon_type: Morph.string.enum(CouponType),
-  coupon_frequency: Morph.string.enum(CouponFrequency),
-  issue_date: Morph.I<unknown>(), // date
-  maturity_date: Morph.I<unknown>(), // date
-  close_price_date: Morph.I<unknown>(), // date
-  first_coupon_date: Morph.I<unknown>(), // date
-  next_coupon_date: Morph.I<unknown>(), // date
-  last_coupon_date: Morph.I<unknown>(), // date
+export const TreasurySchema = Z.object({
+  cusip: Z.string(),
+  isin: Z.string(),
+  bond_status: Z.enum(BondStatus),
+  tradable: Z.boolean(),
+  subtype: Z.enum(TreasurySubtype),
+  description: Z.string(),
+  description_short: Z.string(),
+  close_price: Z.coerce.number(),
+  close_yield_to_maturity: Z.coerce.number(),
+  close_yield_to_worst: Z.coerce.number(),
+  coupon: Z.coerce.number(),
+  coupon_type: Z.enum(CouponType),
+  coupon_frequency: Z.enum(CouponFrequency),
+  issue_date: Z.unknown(), // date
+  maturity_date: Z.unknown(), // date
+  close_price_date: Z.unknown(), // date
+  first_coupon_date: Z.unknown(), // date
+  next_coupon_date: Z.unknown(), // date
+  last_coupon_date: Z.unknown(), // date
 });
 
-export type RawTreasury = Raw<typeof ParseTreasury>;
-export type Treasury = Parsed<typeof ParseTreasury>;
+export type RawTreasury = Z.input<typeof TreasurySchema>;
+export type Treasury = Z.infer<typeof TreasurySchema>;
 
 export default class TradingAssetsModule extends ClientModule {
   async getAssets(query: AssetsQuery) {
@@ -201,7 +201,7 @@ export default class TradingAssetsModule extends ClientModule {
     if (response.status !== 200)
       throw new Error(`Get Assets: Undocumented response status: ${response.status} ${response.statusText}`);
 
-    return ((await response.json()) as RawAsset[]).map(ParseAsset);
+    return AssetSchema.array().parse(await response.json());
   }
 
   async getAsset(symbol_or_asset_id: string) {
@@ -210,7 +210,7 @@ export default class TradingAssetsModule extends ClientModule {
     if (response.status !== 200)
       throw new Error(`Get Asset: Undocumented response status: ${response.status} ${response.statusText}`);
 
-    return ParseAsset(await response.json());
+    return AssetSchema.parse(await response.json());
   }
 
   async getOptionContracts(query: OptionContractsQuery) {
@@ -223,7 +223,7 @@ export default class TradingAssetsModule extends ClientModule {
     if (response.status !== 200)
       throw new Error(`Get Option Contracts: Undocumented response status: ${response.status} ${response.statusText}`);
 
-    return ((await response.json()) as RawOptionContract[]).map(ParseOptionContract);
+    return OptionContractSchema.array().parse(await response.json());
   }
 
   async getOptionContract(symbol_or_id: string) {
@@ -233,7 +233,7 @@ export default class TradingAssetsModule extends ClientModule {
     if (response.status !== 200)
       throw new Error(`Get Option Contract: Undocumented response status: ${response.status} ${response.statusText}`);
 
-    return ParseOptionContract(await response.json());
+    return OptionContractSchema.parse(await response.json());
   }
 
   async getTreasuries(query: TreasuriesQuery) {
@@ -249,6 +249,6 @@ export default class TradingAssetsModule extends ClientModule {
     if (response.status !== 200)
       throw new Error(`Get Treasuries: Undocumented response status: ${response.status} ${response.statusText}`);
 
-    return ((await response.json()) as RawTreasury[]).map(ParseTreasury);
+    return TreasurySchema.array().parse(await response.json());
   }
 }

@@ -1,4 +1,4 @@
-import Morph, { TaggedString } from "./morph.ts";
+import { Z } from "./external.ts";
 
 export type AlpacaAPI = "Trading" | "Market" | "Broker";
 export type APIMethod = "GET" | "OPTIONS" | "PUT" | "DELETE" | "POST" | "PATCH";
@@ -31,7 +31,8 @@ export enum Exchange {
   OTC,
 }
 
-export const alpacaDateTagger = Morph.string.tagged.custom("Alpaca date", (date: string) =>
-  /^\d{4}-\d{2}-\d{2}$/.test(date)
-);
-export type AlpacaDate = TaggedString<typeof alpacaDateTagger>;
+export const AlpacaDateSchema = Z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+export type AlpacaDate = Z.infer<typeof AlpacaDateSchema>;
+
+export const AlpacaTimeSchema = Z.string().regex(/^\d{2}:\d{2}$/);
+export type AlpacaTime = Z.infer<typeof AlpacaTimeSchema>;
