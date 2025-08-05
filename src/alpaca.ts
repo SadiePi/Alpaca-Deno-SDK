@@ -1,3 +1,5 @@
+import { loadSync } from "https://deno.land/std@0.224.0/dotenv/mod.ts";
+
 import { AlpacaClient, AlpacaConfig, AlpacaInstance } from "./client.ts";
 import { APIMethod, BodyParams, QueryParams } from "./common.ts";
 import {
@@ -26,12 +28,14 @@ export default class Alpaca implements AlpacaInstance {
       body?: BodyParams;
     }
   ) {
+    const auth = this.config.auth ?? loadSync();
+
     const requestInit: RequestInit = {
       method,
       headers: {
         accept: "application/json",
-        "APCA-API-KEY-ID": this.config.key,
-        "APCA-API-SECRET-KEY": this.config.secret,
+        "APCA-API-KEY-ID": auth.key,
+        "APCA-API-SECRET-KEY": auth.secret,
       },
     };
 

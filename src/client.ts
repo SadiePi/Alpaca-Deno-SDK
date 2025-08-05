@@ -1,8 +1,12 @@
 import { APIMethod, BodyParams, QueryParams } from "./common.ts";
 
-interface AlpacaConfig {
+interface AlpacaAuth {
   key: string;
   secret: string;
+}
+
+interface AlpacaConfig {
+  auth?: AlpacaAuth;
   paper: boolean;
 }
 
@@ -20,7 +24,7 @@ export abstract class AlpacaClient {
     data?: {
       query?: QueryParams;
       body?: BodyParams;
-    },
+    }
   ) {
     const base = `https://${this.getBaseAPI()}.alpaca.markets/`;
     const url = new URL(path, base);
@@ -37,7 +41,7 @@ export interface AlpacaInstance {
     data?: {
       query?: QueryParams;
       body?: BodyParams;
-    },
+    }
   ): Promise<Response>;
 }
 
