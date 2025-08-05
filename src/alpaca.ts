@@ -1,6 +1,6 @@
 import { loadSync } from "https://deno.land/std@0.224.0/dotenv/mod.ts";
 
-import { AlpacaClient, AlpacaConfig, AlpacaInstance } from "./client.ts";
+import { AlpacaClient, AlpacaConfig } from "./client.ts";
 import { APIMethod, BodyParams, QueryParams } from "./common.ts";
 import {
   TradingAccountModule,
@@ -13,7 +13,7 @@ import {
   TradingWatchlistsModule,
 } from "./trading/mod.ts";
 
-export default class Alpaca implements AlpacaInstance {
+export default class Alpaca {
   constructor(public config: AlpacaConfig) {}
 
   public readonly trading = new TradingClient(this);

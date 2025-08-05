@@ -1,11 +1,12 @@
+import Alpaca from "./alpaca.ts";
 import { APIMethod, BodyParams, QueryParams } from "./common.ts";
 
-interface AlpacaAuth {
+export interface AlpacaAuth {
   key: string;
   secret: string;
 }
 
-interface AlpacaConfig {
+export interface AlpacaConfig {
   auth?: AlpacaAuth;
   paper: boolean;
 }
@@ -15,7 +16,7 @@ export abstract class ClientModule {
 }
 
 export abstract class AlpacaClient {
-  constructor(protected alpaca: AlpacaInstance) {}
+  constructor(protected alpaca: Alpaca) {}
   protected abstract getBaseAPI(): string;
 
   fetch(
@@ -32,17 +33,3 @@ export abstract class AlpacaClient {
     return this.alpaca.fetch(url, method, data);
   }
 }
-
-export interface AlpacaInstance {
-  config: AlpacaConfig;
-  fetch(
-    url: URL,
-    method: APIMethod,
-    data?: {
-      query?: QueryParams;
-      body?: BodyParams;
-    }
-  ): Promise<Response>;
-}
-
-export { type AlpacaConfig };
