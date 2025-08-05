@@ -7,12 +7,19 @@ export enum CalendarDateType {
   SETTLEMENT,
 }
 
-export const ParseCalendar = Morph.object.parse({
-  date: Morph.string.temporal.date,
-  open: Morph.string.temporal.time,
-  close: Morph.string.temporal.time,
-  settlement_date: Morph.string.temporal.date,
+// const AlpacaDate = Morph.string.tagged.custom("alpaca-date", date => {)
+
+export const ParseCalendarDay = Morph.object.parse({
+  date: Morph.string.tagged.date,
+  open: Morph.string.tagged.time,
+  close: Morph.string.tagged.time,
+  settlement_date: Morph.string.tagged.date,
 });
+
+export type RawCalendarDay = Raw<typeof ParseCalendarDay>;
+export type CalendarDay = Parsed<typeof ParseCalendarDay>;
+
+export const ParseCalendar = Morph.array.map(ParseCalendarDay);
 
 export type RawCalendar = Raw<typeof ParseCalendar>;
 export type Calendar = Parsed<typeof ParseCalendar>;
@@ -34,7 +41,7 @@ export interface CalendarQuery {
 }
 
 export default class TradingTimeModule extends ClientModule {
-  async calendar(query?: CalendarQuery): Promise<Calendar[]> {
+  async calendar(query?: CalendarQuery): Promise<Calendar> {
     const preparedQuery: QueryParams = {};
     if (query?.start) preparedQuery.start = query.start.toString();
     if (query?.end) preparedQuery.end = query.end.toString();
@@ -44,7 +51,7 @@ export default class TradingTimeModule extends ClientModule {
     if (response.status !== 200)
       throw new Error(`Get Calendar: Undocumented response status: ${response.status} ${response.statusText}`);
 
-    return ((await response.json()) as RawCalendar[]).map(ParseCalendar);
+    return ParseCalendar(await response.json());
   }
 
   async clock(): Promise<Clock> {

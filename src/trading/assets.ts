@@ -107,7 +107,7 @@ export interface TreasuriesQuery {
 }
 
 export const ParseAsset = Morph.object.parse({
-  id: Morph.string.uuid,
+  id: Morph.string.tagged.uuid,
   class: Morph.string.enum(AssetClass),
   cusip: Morph.I<string | null>(),
   exchange: Morph.string.enum(Exchange),
@@ -143,7 +143,7 @@ export type RawDeliverable = Raw<typeof ParseDeliverable>;
 export type Deliverable = Parsed<typeof ParseDeliverable>;
 
 export const ParseOptionContract = Morph.object.parse({
-  id: Morph.string.uuid,
+  id: Morph.string.tagged.uuid,
   symbol: Morph.I<string>(),
   name: Morph.I<string>(),
   status: Morph.string.enum(ActiveStatus),

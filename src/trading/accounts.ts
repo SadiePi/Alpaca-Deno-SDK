@@ -41,7 +41,7 @@ export enum OptionsTradingLevel {
 }
 
 const ParseAccount = Morph.object.parse({
-  id: Morph.string.uuid,
+  id: Morph.string.tagged.uuid,
   buying_power: Morph.string.float,
   regt_buying_power: Morph.string.float,
   daytrading_buying_power: Morph.string.float,

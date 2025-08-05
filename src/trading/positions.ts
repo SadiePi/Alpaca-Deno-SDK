@@ -1,10 +1,10 @@
 import { ClientModule } from "../client.ts";
-import { AssetClass, Exchange, UUID } from "../common.ts";
-import { Morph, Parsed, Raw } from "../morph.ts";
+import { AssetClass, Exchange } from "../common.ts";
+import { Morph, Parsed, Raw, UUID } from "../morph.ts";
 import { Order, OrderSide, ParseOrder } from "./orders.ts";
 
 export const ParsePosition = Morph.object.parse({
-  asset_id: Morph.string.uuid,
+  asset_id: Morph.string.tagged.uuid,
   symbol: Morph.I<string>(),
   exchange: Morph.string.enum(Exchange),
   asset_class: Morph.string.enum(AssetClass),

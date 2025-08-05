@@ -1,5 +1,4 @@
 // deno-lint-ignore-file no-explicit-any
-import { UUID, validateUUID } from "./common.ts";
 
 export type Parser<Raw, Parsed> = (raw: Raw) => Parsed;
 export type Raw<P extends Parser<any, unknown>> = P extends Parser<infer R, any> ? R : never;
@@ -10,22 +9,35 @@ type RawObject<OS extends ObjectSchema> = { [key in keyof OS]: Raw<OS[key]> };
 type ParsedObject<OS extends ObjectSchema> = { [key in keyof OS]: Parsed<OS[key]> };
 type ObjectParser<Schema extends ObjectSchema> = Parser<RawObject<Schema>, ParsedObject<Schema>>;
 
+export type TaggedString<Tag extends string> = string & { tag: Tag };
+export type UUID = TaggedString<"UUID">;
+const stringTagger =
+  <Tag extends string>(tag: Tag, validator: (input: string) => boolean) =>
+  (input: string): TaggedString<Tag> => {
+    if (!validator(input)) throw new Error(`Morph: Can't tag "${input}" as "${tag}"`);
+    return Object.assign(input, { tag }) as TaggedString<Tag>;
+  };
+
 export const Morph = {
   I:
     <T>() =>
     (_: T) =>
       _,
   string: {
+    tagged: {
+      custom: stringTagger,
+      uuid: stringTagger("UUID", uuid => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)),
+      date: stringTagger("date", () => true),
+      time: stringTagger("time", () => true),
+      dateTime: stringTagger("dateTime", () => true),
+    },
     float: parseFloat,
-    int: parseInt,
-    uuid: (input: string): UUID | Error =>
-      validateUUID(input) ? (input as UUID) : new Error(`Invalid UUID: ${input}`),
-    // this is beautiful and disgusting
+    int: parseInt, // this is beautiful and disgusting
     enum:
       <Enum extends object>(_enum: Enum) =>
       (input: string): Enum | Error =>
         Object.values(_enum).includes(input as any)
-          ? (input as unknown as Enum)
+          ? (_enum[input as keyof Enum] as Enum)
           : new Error(`Invalid enum value: ${input}`),
     temporal: {
       date: () => {},
@@ -40,7 +52,10 @@ export const Morph = {
   boolean: { number: (input: boolean): number => +input },
   array: {
     string: (input: unknown[]): string => input.map(entry => String(entry)).join(", "),
-    // each:
+    map:
+      <Raw, Parsed>(parser: Parser<Raw, Parsed>) =>
+      (input: Raw[]): Parsed[] =>
+        input.map(parser),
   },
   object: {
     string: (input: Record<string, unknown>): string => JSON.stringify(input),

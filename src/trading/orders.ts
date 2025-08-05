@@ -1,6 +1,6 @@
 import { ClientModule } from "../client.ts";
-import { AssetClass, QueryParams, UUID } from "../common.ts";
-import { Morph, Parsed, Raw } from "../morph.ts";
+import { AssetClass, QueryParams } from "../common.ts";
+import { Morph, Parsed, Raw, UUID } from "../morph.ts";
 
 export enum OrderClass {
   Simple = "simple",
@@ -107,11 +107,11 @@ export interface OrdersQuery {
 }
 
 export const ParseOrder = Morph.object.parse({
-  id: Morph.string.uuid,
+  id: Morph.string.tagged.uuid,
   client_order_id: Morph.I<string>(),
-  replaced_by: Morph.string.uuid,
-  replaces: Morph.string.uuid,
-  asset_id: Morph.string.uuid,
+  replaced_by: Morph.string.tagged.uuid,
+  replaces: Morph.string.tagged.uuid,
+  asset_id: Morph.string.tagged.uuid,
   symbol: Morph.I<string>(),
   asset_class: Morph.string.enum(AssetClass),
   order_class: Morph.string.enum(OrderClass),
@@ -147,7 +147,7 @@ export type Order = Parsed<typeof ParseOrder>;
 
 export const ParseDeleteOrderResponse = Morph.object.parse({
   status: Morph.I<number>(),
-  id: Morph.string.uuid,
+  id: Morph.string.tagged.uuid,
 });
 
 export type RawDeleteOrderResponse = Raw<typeof ParseDeleteOrderResponse>;
