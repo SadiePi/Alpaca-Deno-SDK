@@ -57,10 +57,6 @@ export default class Alpaca {
 }
 
 export class TradingClient extends AlpacaClient {
-  constructor(alpaca: Alpaca) {
-    super(alpaca);
-  }
-
   protected override getBaseAPI(): string {
     return this.alpaca.config.paper ? "paper-api" : "live";
   }
@@ -75,8 +71,10 @@ export class TradingClient extends AlpacaClient {
   public readonly crypto = new TradingCryptoModule(this);
 }
 
-export class MarketClient {
-  constructor(private alpaca: Alpaca) {}
+export class MarketClient extends AlpacaClient {
+  protected override getBaseAPI() {
+    return "data";
+  }
 
   // Stock
   // Option
@@ -89,8 +87,10 @@ export class MarketClient {
   // Corporate Actions
 }
 
-export class BrokerClient {
-  constructor(private alpaca: Alpaca) {}
+export class BrokerClient extends AlpacaClient {
+  protected override getBaseAPI(): string {
+    return "broker-api.sandbox";
+  }
 
   // Accounts
   // Documents
