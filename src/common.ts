@@ -21,3 +21,19 @@ export function validateUUID(uuid: string): uuid is UUID {
 
 export type QueryParams = Record<string, string | number | boolean | null>;
 export type BodyParams = Record<string, unknown>;
+
+export enum AssetClass {
+  UsEquity = "us_equity",
+  UsOption = "us_option",
+  Crypto = "crypto",
+}
+
+export enum Exchange {
+  AMEX,
+  ARCA,
+  BATS,
+  NYSE,
+  NASDAQ,
+  NYSEARCA,
+  OTC,
+}

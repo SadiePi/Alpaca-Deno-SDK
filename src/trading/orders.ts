@@ -1,7 +1,6 @@
 import { ClientModule } from "../client.ts";
-import { QueryParams, UUID } from "../common.ts";
-import { From, parse, Parsed, ParsingSchema, Raw } from "../parsing.ts";
-import { AssetClass } from "./assets.ts";
+import { AssetClass, QueryParams, UUID } from "../common.ts";
+import { Morph, Parsed, Raw } from "../morph.ts";
 
 export enum OrderClass {
   Simple = "simple",
@@ -107,22 +106,22 @@ export interface OrdersQuery {
   asset_class?: AssetClass[];
 }
 
-const OrderSchema = {
-  id: From.string.uuid,
-  client_order_id: From.I<string>(),
-  replaced_by: From.string.uuid,
-  replaces: From.string.uuid,
-  asset_id: From.string.uuid,
-  symbol: From.I<string>(),
-  asset_class: From.string.enum(AssetClass),
-  order_class: From.string.enum(OrderClass),
-  order_type: From.string.enum(OrderType), // deprecated, see type
-  type: From.string.enum(OrderType),
-  side: From.string.enum(OrderSide),
-  time_in_force: From.string.enum(TimeInForce),
-  status: From.string.enum(OrderStatus),
-  extended_hours: From.I<boolean>(),
-  position_intent: From.string.enum(PositionIntent),
+export const ParseOrder = Morph.object.parse({
+  id: Morph.string.uuid,
+  client_order_id: Morph.I<string>(),
+  replaced_by: Morph.string.uuid,
+  replaces: Morph.string.uuid,
+  asset_id: Morph.string.uuid,
+  symbol: Morph.I<string>(),
+  asset_class: Morph.string.enum(AssetClass),
+  order_class: Morph.string.enum(OrderClass),
+  order_type: Morph.string.enum(OrderType), // deprecated, see type
+  type: Morph.string.enum(OrderType),
+  side: Morph.string.enum(OrderSide),
+  time_in_force: Morph.string.enum(TimeInForce),
+  status: Morph.string.enum(OrderStatus),
+  extended_hours: Morph.I<boolean>(),
+  position_intent: Morph.string.enum(PositionIntent),
   // created_at: From.I<string>(), // date-time
   // updated_at: From.I<string>(), // date-time
   // submitted_at: From.I<string>(), // date-time
@@ -131,26 +130,28 @@ const OrderSchema = {
   // canceled_at: From.I<string>(), // date-time
   // failed_at: From.I<string>(), // date-time
   // replaced_at: From.I<string>(), // date-time
-  notional: From.string.float, // deprecated, see qty
-  qty: From.string.float,
-  filled_qty: From.string.float,
-  filled_avg_price: From.string.float,
-  limit_price: From.string.float,
-  stop_price: From.string.float,
-  legs: From.I<RawOrderLeg[]>(),
-  trail_percent: From.string.float,
-  trail_price: From.string.float,
-  hwm: From.string.float,
-} as const satisfies ParsingSchema;
-export type RawOrder = Raw<typeof OrderSchema>;
-export type Order = Parsed<typeof OrderSchema>;
+  notional: Morph.string.float, // deprecated, see qty
+  qty: Morph.string.float,
+  filled_qty: Morph.string.float,
+  filled_avg_price: Morph.string.float,
+  limit_price: Morph.string.float,
+  stop_price: Morph.string.float,
+  legs: Morph.I<RawOrderLeg[]>(),
+  trail_percent: Morph.string.float,
+  trail_price: Morph.string.float,
+  hwm: Morph.string.float,
+});
 
-const DeleteOrderResponseSchema = {
-  status: From.I<number>(),
-  id: From.string.uuid,
-} as const satisfies ParsingSchema;
-export type RawDeleteOrderResponse = Raw<typeof DeleteOrderResponseSchema>;
-export type DeleteOrderResponse = Parsed<typeof DeleteOrderResponseSchema>;
+export type RawOrder = Raw<typeof ParseOrder>;
+export type Order = Parsed<typeof ParseOrder>;
+
+export const ParseDeleteOrderResponse = Morph.object.parse({
+  status: Morph.I<number>(),
+  id: Morph.string.uuid,
+});
+
+export type RawDeleteOrderResponse = Raw<typeof ParseDeleteOrderResponse>;
+export type DeleteOrderResponse = Parsed<typeof ParseDeleteOrderResponse>;
 
 export default class TradingOrdersModule extends ClientModule {
   async _create(_body: OrderBody) {}
@@ -161,76 +162,48 @@ export default class TradingOrdersModule extends ClientModule {
     // if(query.until) preparedQuery.until = converted
     if (query.symbols) preparedQuery.symbols = query.symbols.join(",");
 
-    const response = await this.client.fetch("v2/orders", "GET", {
-      query: preparedQuery,
-    });
-    if (response.status !== 200) {
-      throw new Error(
-        `Get Orders: Unexpected response status: ${response.status} ${response.statusText}`,
-      );
-    }
+    const response = await this.client.fetch("v2/orders", "GET", { query: preparedQuery });
+    if (response.status !== 200)
+      throw new Error(`Get Orders: Undocumented response status: ${response.status} ${response.statusText}`);
 
-    const json = (await response.json()) as RawOrder[];
-    // TODO validate
-    return json.map((order) => parse(OrderSchema, order));
+    return ((await response.json()) as RawOrder[]).map(ParseOrder);
   }
 
   async deleteAll() {
     const response = await this.client.fetch("v2/orders", "DELETE");
-    if (response.status !== 207) {
-      throw new Error(
-        `Delete All Orders: Unexpected response status: ${response.status} ${response.statusText}`,
-      );
-    }
+    if (response.status !== 207)
+      throw new Error(`Delete All Orders: Undocumented response status: ${response.status} ${response.statusText}`);
 
-    const json = (await response.json()) as RawDeleteOrderResponse[];
-    // TODO validate
-    const parsed = json.map((order) => parse(DeleteOrderResponseSchema, order));
-    parsed.forEach((order) => {
-      if (order.status !== 200) {
-        throw new Error(
-          `Delete All Orders: Order ${order.id} failed with status ${order.status}`,
-        );
-      }
-    });
+    const parsed = ((await response.json()) as RawDeleteOrderResponse[]).map(ParseDeleteOrderResponse);
+    const errors = parsed
+      .filter(order => order.status !== 200)
+      .map(order => new Error(`Delete All Orders: Failed to delete order ${order.id}: ${order.status}`));
+    if (errors) throw errors;
+
     return parsed;
   }
 
   async getByClientID(client_order_id: UUID) {
     const preparedQuery: QueryParams = { client_order_id };
 
-    const response = await this.client.fetch(
-      "v2/orders:by_client_order_id",
-      "GET",
-      { query: preparedQuery },
-    );
-    if (response.status !== 200) {
+    const response = await this.client.fetch("v2/orders:by_client_order_id", "GET", { query: preparedQuery });
+    if (response.status !== 200)
       throw new Error(
-        `Get Order by Client ID: Unexpected response status: ${response.status} ${response.statusText}`,
+        `Get Order by Client ID: Undocumented response status: ${response.status} ${response.statusText}`
       );
-    }
 
-    const json = (await response.json()) as RawOrder;
-    // TODO validate
-    return parse(OrderSchema, json);
+    return ParseOrder(await response.json());
   }
 
-  async get(_order_id: UUID, nested?: boolean) {
+  async get(order_id: UUID, nested?: boolean) {
     const preparedQuery: QueryParams = {};
     if (nested) preparedQuery.nested = nested.toString();
 
-    const response = await this.client.fetch(`v2/orders/${_order_id}`, "GET", {
-      query: preparedQuery,
-    });
-    if (response.status !== 200) {
-      throw new Error(
-        `Get Order: Unexpected response status: ${response.status} ${response.statusText}`,
-      );
-    }
+    const response = await this.client.fetch(`v2/orders/${order_id}`, "GET", { query: preparedQuery });
+    if (response.status !== 200)
+      throw new Error(`Get Order: Undocumented response status: ${response.status} ${response.statusText}`);
 
-    const json = (await response.json()) as RawOrder;
-    // TODO validate
-    return parse(OrderSchema, json);
+    return ParseOrder(await response.json());
   }
 
   async _replace(_order_id: UUID, _body: OrderBody) {}

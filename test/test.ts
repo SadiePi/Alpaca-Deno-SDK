@@ -1,4 +1,4 @@
-import Alpaca from "../mod.ts";
+import Alpaca from "../src/mod.ts";
 
 const alpaca = new Alpaca({ paper: true });
 

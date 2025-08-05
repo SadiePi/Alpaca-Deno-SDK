@@ -1,6 +1,6 @@
 import { ClientModule } from "../client.ts";
 import { Currency } from "../common.ts";
-import { From, parse, Parsed, ParsingSchema, Raw } from "../parsing.ts";
+import { Morph, Parsed, Raw } from "../morph.ts";
 
 /**
  * The various possible account status values.
@@ -40,71 +40,65 @@ export enum OptionsTradingLevel {
   SPREADS_STRADDLES = 3,
 }
 
-const AccountSchema = {
-  id: From.string.uuid,
-  buying_power: From.string.float,
-  regt_buying_power: From.string.float,
-  daytrading_buying_power: From.string.float,
-  options_buying_power: From.string.float,
-  non_marginable_buying_power: From.string.float,
-  cash: From.string.float,
-  accrued_fees: From.string.float,
-  pending_transfer_in: From.string.float,
-  multiplier: From.string.int,
-  equity: From.string.float,
-  last_equity: From.string.float,
-  long_market_value: From.string.float,
-  short_market_value: From.string.float,
-  initial_margin: From.string.float,
-  maintenance_margin: From.string.float,
-  last_maintenance_margin: From.string.float,
-  sma: From.string.float,
-  intraday_adjustments: From.string.int,
-  pending_reg_taf_fees: From.string.float,
+const ParseAccount = Morph.object.parse({
+  id: Morph.string.uuid,
+  buying_power: Morph.string.float,
+  regt_buying_power: Morph.string.float,
+  daytrading_buying_power: Morph.string.float,
+  options_buying_power: Morph.string.float,
+  non_marginable_buying_power: Morph.string.float,
+  cash: Morph.string.float,
+  accrued_fees: Morph.string.float,
+  pending_transfer_in: Morph.string.float,
+  multiplier: Morph.string.int,
+  equity: Morph.string.float,
+  last_equity: Morph.string.float,
+  long_market_value: Morph.string.float,
+  short_market_value: Morph.string.float,
+  initial_margin: Morph.string.float,
+  maintenance_margin: Morph.string.float,
+  last_maintenance_margin: Morph.string.float,
+  sma: Morph.string.float,
+  intraday_adjustments: Morph.string.int,
+  pending_reg_taf_fees: Morph.string.float,
 
-  portfolio_value: From.string.float, // deprecated, see `equity`
+  portfolio_value: Morph.string.float, // deprecated, see `equity`
 
   // created_at: Temporal.PlainDateTime; // unused?
   // pending_transfer_out: number; // unused?
   // balance_asof: Temporal.PlainDate; // unused?
 
-  effective_buying_power: From.string.float, // undocumented
-  position_market_value: From.string.float, // undocumented
-  bod_dtbp: From.string.float, // undocumented
+  effective_buying_power: Morph.string.float, // undocumented
+  position_market_value: Morph.string.float, // undocumented
+  bod_dtbp: Morph.string.float, // undocumented
 
-  status: From.string.enum(AccountStatus),
-  currency: From.string.enum(Currency),
-  account_number: From.I<string>(),
+  status: Morph.string.enum(AccountStatus),
+  currency: Morph.string.enum(Currency),
+  account_number: Morph.I<string>(),
 
-  pattern_day_trader: From.I<boolean>(),
+  pattern_day_trader: Morph.I<boolean>(),
   // crypto_tier: CryptoTier;
-  trading_blocked: From.I<boolean>(),
-  transfers_blocked: From.I<boolean>(),
-  options_trading_level: From.string.enum(OptionsTradingLevel),
-  account_blocked: From.I<boolean>(),
-  trade_suspended_by_user: From.I<boolean>(),
-  shorting_enabled: From.I<boolean>(),
-  daytrade_count: From.I<number>(),
+  trading_blocked: Morph.I<boolean>(),
+  transfers_blocked: Morph.I<boolean>(),
+  options_trading_level: Morph.string.enum(OptionsTradingLevel),
+  account_blocked: Morph.I<boolean>(),
+  trade_suspended_by_user: Morph.I<boolean>(),
+  shorting_enabled: Morph.I<boolean>(),
+  daytrade_count: Morph.I<number>(),
   // admin_configuration: unknown; // undocumented
   // user_configurations: unknown; // undocumented
   // crypto_status: unknown; // undocumented
-} as const satisfies ParsingSchema;
+});
 
-export type RawAccount = Raw<typeof AccountSchema>;
-export type Account = Parsed<typeof AccountSchema>;
+export type RawAccount = Raw<typeof ParseAccount>;
+export type Account = Parsed<typeof ParseAccount>;
 
 export default class TradingAccountModule extends ClientModule {
   async get(): Promise<Account> {
     const response = await this.client.fetch("v2/account", "GET");
-    if (response.status !== 200) {
-      throw new Error(
-        `Get Account: Unexpected ${response.status} ${response.statusText}`,
-      );
-    }
+    if (response.status !== 200) throw new Error(`Get Account: Undocumented ${response.status} ${response.statusText}`);
 
-    const json = await response.json();
-    // TODO validate
-    return parse(AccountSchema, json as RawAccount);
+    return ParseAccount(await response.json());
   }
 
   _configs() {}

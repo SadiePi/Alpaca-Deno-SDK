@@ -1,12 +1,9 @@
-import { loadSync } from "https://deno.land/std@0.224.0/dotenv/mod.ts";
-
+import { AlpacaClient, AlpacaConfig, AlpacaInstance } from "./client.ts";
 import { APIMethod, BodyParams, QueryParams } from "./common.ts";
-import { AlpacaClient, type AlpacaConfig } from "./client.ts";
 import {
   TradingAccountModule,
   TradingAssetsModule,
-  TradingCalendarModule,
-  TradingClockModule,
+  TradingTimeModule,
   TradingCryptoModule,
   TradingHistoryModule,
   TradingOrdersModule,
@@ -14,7 +11,7 @@ import {
   TradingWatchlistsModule,
 } from "./trading/mod.ts";
 
-export default class Alpaca {
+export default class Alpaca implements AlpacaInstance {
   constructor(public config: AlpacaConfig) {}
 
   public readonly trading = new TradingClient(this);
@@ -27,23 +24,20 @@ export default class Alpaca {
     data?: {
       query?: QueryParams;
       body?: BodyParams;
-    },
+    }
   ) {
-    const { key, secret } = this.config.auth ?? loadSync();
-
     const requestInit: RequestInit = {
       method,
       headers: {
         accept: "application/json",
-        "APCA-API-KEY-ID": key,
-        "APCA-API-SECRET-KEY": secret,
+        "APCA-API-KEY-ID": this.config.key,
+        "APCA-API-SECRET-KEY": this.config.secret,
       },
     };
 
     if (data?.query) {
-      Object.entries(data.query).forEach(([key, value]) =>
-        url.searchParams.set(key, String(value))
-      );
+      const queryEntries = Object.entries(data.query);
+      queryEntries.forEach(([key, value]) => url.searchParams.set(key, String(value)));
     }
 
     if (data?.body) {
@@ -59,6 +53,10 @@ export default class Alpaca {
 }
 
 export class TradingClient extends AlpacaClient {
+  constructor(alpaca: Alpaca) {
+    super(alpaca);
+  }
+
   protected override getBaseAPI(): string {
     return this.alpaca.config.paper ? "paper-api" : "live";
   }
@@ -69,8 +67,7 @@ export class TradingClient extends AlpacaClient {
   public readonly positions = new TradingPositionsModule(this);
   public readonly history = new TradingHistoryModule(this);
   public readonly watchlists = new TradingWatchlistsModule(this);
-  public readonly calendar = new TradingCalendarModule(this);
-  public readonly clock = new TradingClockModule(this);
+  public readonly time = new TradingTimeModule(this);
   public readonly crypto = new TradingCryptoModule(this);
 }
 
