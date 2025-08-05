@@ -96,7 +96,8 @@ export type Account = Parsed<typeof ParseAccount>;
 export default class TradingAccountModule extends ClientModule {
   async get(): Promise<Account> {
     const response = await this.client.fetch("v2/account", "GET");
-    if (response.status !== 200) throw new Error(`Get Account: Undocumented ${response.status} ${response.statusText}`);
+    if (response.status !== 200)
+      throw new Error(`Get Account: Undocumented response status ${response.status} ${response.statusText}`);
 
     return ParseAccount(await response.json());
   }
