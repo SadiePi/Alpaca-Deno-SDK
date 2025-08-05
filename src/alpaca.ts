@@ -1,5 +1,7 @@
+import { loadSync } from "https://deno.land/std@0.224.0/dotenv/mod.ts";
+
 import { APIMethod, BodyParams, QueryParams } from "./common.ts";
-import { AlpacaClient, type AlpacaConfig, AlpacaInstance } from "./client.ts";
+import { AlpacaClient, type AlpacaConfig } from "./client.ts";
 import {
   TradingAccountModule,
   TradingAssetsModule,
@@ -12,7 +14,7 @@ import {
   TradingWatchlistsModule,
 } from "./trading/mod.ts";
 
-export default class Alpaca implements AlpacaInstance {
+export default class Alpaca {
   constructor(public config: AlpacaConfig) {}
 
   public readonly trading = new TradingClient(this);
@@ -27,18 +29,19 @@ export default class Alpaca implements AlpacaInstance {
       body?: BodyParams;
     },
   ) {
+    const { key, secret } = this.config.auth ?? loadSync();
+
     const requestInit: RequestInit = {
       method,
       headers: {
         accept: "application/json",
-        "APCA-API-KEY-ID": this.config.key,
-        "APCA-API-SECRET-KEY": this.config.secret,
+        "APCA-API-KEY-ID": key,
+        "APCA-API-SECRET-KEY": secret,
       },
     };
 
     if (data?.query) {
-      const queryEntries = Object.entries(data.query);
-      queryEntries.forEach(([key, value]) =>
+      Object.entries(data.query).forEach(([key, value]) =>
         url.searchParams.set(key, String(value))
       );
     }
@@ -56,10 +59,6 @@ export default class Alpaca implements AlpacaInstance {
 }
 
 export class TradingClient extends AlpacaClient {
-  constructor(alpaca: Alpaca) {
-    super(alpaca);
-  }
-
   protected override getBaseAPI(): string {
     return this.alpaca.config.paper ? "paper-api" : "live";
   }
