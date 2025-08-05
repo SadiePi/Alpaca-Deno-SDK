@@ -9,11 +9,14 @@ type RawObject<OS extends ObjectSchema> = { [key in keyof OS]: Raw<OS[key]> };
 type ParsedObject<OS extends ObjectSchema> = { [key in keyof OS]: Parsed<OS[key]> };
 type ObjectParser<Schema extends ObjectSchema> = Parser<RawObject<Schema>, ParsedObject<Schema>>;
 
-export type TaggedString<Tag extends string> = string & { tag: Tag };
+export type TaggedString<Tag extends string | StringTagger<string>> = string & {
+  tag: Tag extends StringTagger<infer T> ? T : Tag;
+};
 export type UUID = TaggedString<"UUID">;
+export type StringTagger<Tag extends string> = (input: string) => TaggedString<Tag>;
 const stringTagger =
-  <Tag extends string>(tag: Tag, validator: (input: string) => boolean) =>
-  (input: string): TaggedString<Tag> => {
+  <Tag extends string>(tag: Tag, validator: (input: string) => boolean): StringTagger<Tag> =>
+  input => {
     if (!validator(input)) throw new Error(`Morph: Can't tag "${input}" as "${tag}"`);
     return Object.assign(input, { tag }) as TaggedString<Tag>;
   };
@@ -66,6 +69,10 @@ export const Morph = {
           _raw: raw,
         }) as ParsedObject<Schema>,
   },
+  maybe:
+    <Raw, Parsed>(parser: Parser<Raw, Parsed>): MaybeParser<Raw, Parsed> =>
+    input =>
+      input === undefined ? undefined : parser(input),
 } as const;
 
 export default Morph;

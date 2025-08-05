@@ -1,3 +1,5 @@
+import Morph, { TaggedString } from "./morph.ts";
+
 export type AlpacaAPI = "Trading" | "Market" | "Broker";
 export type APIMethod = "GET" | "OPTIONS" | "PUT" | "DELETE" | "POST" | "PATCH";
 /**
@@ -28,3 +30,8 @@ export enum Exchange {
   NYSEARCA,
   OTC,
 }
+
+export const alpacaDateTagger = Morph.string.tagged.custom("Alpaca date", (date: string) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(date)
+);
+export type AlpacaDate = TaggedString<typeof alpacaDateTagger>;
