@@ -2,6 +2,7 @@ import { altesta } from "./common.ts";
 
 Deno.test("Account Module", async () => {
   const account = await altesta.trading.account.get();
+  console.log(account);
 });
 
 Deno.test.ignore("Assets Module", () => {

@@ -1,5 +1,5 @@
 import { ClientModule } from "../client.ts";
-import { Currency } from "../common.ts";
+import { AlpacaDateSchema, AlpacaDateTimeSchema, CurrencySchema } from "../common.ts";
 import { Z } from "../external.ts";
 
 /**
@@ -15,82 +15,74 @@ import { Z } from "../external.ts";
  * - ACTIVE: The account is active for trading
  * - REJECTED: The account application has been rejected
  */
-export enum AccountStatus {
-  ONBOARDING = "ONBOARDING",
-  SUBMISSION_FAILED = "SUBMISSION_FAILED",
-  SUBMITTED = "SUBMITTED",
-  ACCOUNT_UPDATED = "ACCOUNT_UPDATED",
-  APPROVAL_PENDING = "APPROVAL_PENDING",
-  ACTIVE = "ACTIVE",
-  REJECTED = "REJECTED",
-}
-
-/** Undocumented */
-export type CryptoTier = 0 | 1 | 2 | 3;
+export const AccountStatusSchema = Z.union([
+  Z.literal("ONBOARDING"),
+  Z.literal("SUBMISSION_FAILED"),
+  Z.literal("SUBMITTED"),
+  Z.literal("ACCOUNT_UPDATED"),
+  Z.literal("APPROVAL_PENDING"),
+  Z.literal("ACTIVE"),
+  Z.literal("REJECTED"),
+]);
+export type AccountStatus = Z.infer<typeof AccountStatusSchema>;
 
 /** The effective options trading level of the account */
 export enum OptionsTradingLevel {
-  /** Options trading is disabled */
-  DISABLED = 0,
-  /** Covered Call/Cash-Secured Put */
-  COVERED_CALL_CASH_SECURED_PUT = 1,
-  /** Long Call/Put */
-  LONG_CALL_PUT = 2,
-  /** Spreads/Straddles */
-  SPREADS_STRADDLES = 3,
+  "disabled" = 0,
+  "Covered Call/Cash-Secured Put" = 1,
+  "Long Call/Put" = 2,
+  "Spreads/Straddles" = 3,
 }
+export const OptionsTradingLevelSchema = Z.enum(OptionsTradingLevel);
 
 const AccountSchema = Z.object({
   id: Z.uuid(),
-  buying_power: Z.coerce.number(),
-  regt_buying_power: Z.coerce.number(),
-  daytrading_buying_power: Z.coerce.number(),
-  options_buying_power: Z.coerce.number(),
-  non_marginable_buying_power: Z.coerce.number(),
-  cash: Z.coerce.number(),
-  accrued_fees: Z.coerce.number(),
-  pending_transfer_in: Z.coerce.number(),
-  multiplier: Z.coerce.number(),
-  equity: Z.coerce.number(),
-  last_equity: Z.coerce.number(),
-  long_market_value: Z.coerce.number(),
-  short_market_value: Z.coerce.number(),
-  initial_margin: Z.coerce.number(),
-  maintenance_margin: Z.coerce.number(),
-  last_maintenance_margin: Z.coerce.number(),
-  sma: Z.coerce.number(),
-  intraday_adjustments: Z.coerce.number(),
-  pending_reg_taf_fees: Z.coerce.number(),
+  account_number: Z.string().optional(),
+  status: AccountStatusSchema,
+  currency: CurrencySchema.optional(),
+  cash: Z.coerce.number().optional(),
+  portfolio_value: Z.coerce.number().optional(), // deprecated, see `equity`
+  non_marginable_buying_power: Z.coerce.number().optional(),
+  accrued_fees: Z.coerce.number().optional(),
+  pending_transfer_in: Z.coerce.number().optional(),
+  pending_transfer_out: Z.coerce.number().optional(),
+  pattern_day_trader: Z.boolean().optional(),
+  trade_suspended_by_user: Z.boolean().optional(),
+  trading_blocked: Z.boolean().optional(),
+  transfers_blocked: Z.boolean().optional(),
+  account_blocked: Z.boolean().optional(),
+  created_at: AlpacaDateTimeSchema.optional(),
+  shorting_enabled: Z.boolean().optional(),
+  long_market_value: Z.coerce.number().optional(),
+  short_market_value: Z.coerce.number().optional(),
+  equity: Z.coerce.number().optional(),
+  last_equity: Z.coerce.number().optional(),
+  multiplier: Z.coerce.number().int().optional(),
+  buying_power: Z.coerce.number().optional(),
+  maintenance_margin: Z.coerce.number().optional(),
+  initial_margin: Z.coerce.number().optional(),
+  sma: Z.coerce.number().optional(),
+  daytrade_count: Z.int().optional(),
+  balance_asof: AlpacaDateSchema.optional(),
+  last_maintenance_margin: Z.coerce.number().optional(),
+  daytrading_buying_power: Z.coerce.number().optional(),
+  regt_buying_power: Z.coerce.number().optional(),
+  options_buying_power: Z.coerce.number().optional(),
+  options_approved_level: OptionsTradingLevelSchema.optional(),
+  options_trading_level: OptionsTradingLevelSchema.optional(),
+  intraday_adjustments: Z.coerce.number().optional(),
+  pending_reg_taf_fees: Z.coerce.number().optional(),
 
-  portfolio_value: Z.coerce.number(), // deprecated, see `equity`
+  // Undocumented fields, see https://docs.alpaca.markets/reference/getaccount-1 200 example
+  effective_buying_power: Z.unknown().optional(),
+  position_market_value: Z.unknown().optional(),
+  bod_dtbp: Z.unknown().optional(),
+  crypto_tier: Z.unknown().optional(),
+  admin_configurations: Z.unknown().optional(),
+  user_configurations: Z.unknown().optional(),
+  crypto_status: Z.unknown().optional(),
+}).strict();
 
-  // created_at: Temporal.PlainDateTime; // unused?
-  // pending_transfer_out: number; // unused?
-  // balance_asof: Temporal.PlainDate; // unused?
-
-  effective_buying_power: Z.coerce.number(), // undocumented
-  position_market_value: Z.coerce.number(), // undocumented
-  bod_dtbp: Z.coerce.number(), // undocumented
-
-  status: Z.enum(AccountStatus),
-  currency: Z.enum(Currency),
-  account_number: Z.string(),
-
-  pattern_day_trader: Z.boolean(),
-  // crypto_tier: CryptoTier;
-  trading_blocked: Z.boolean(),
-  transfers_blocked: Z.boolean(),
-  options_trading_level: Z.enum(OptionsTradingLevel),
-  account_blocked: Z.boolean(),
-  trade_suspended_by_user: Z.boolean(),
-  shorting_enabled: Z.boolean(),
-  daytrade_count: Z.number(),
-  // admin_configuration: unknown; // undocumented
-  // user_configurations: unknown; // undocumented
-  // crypto_status: unknown; // undocumented
-});
-
-export type RawAccount = Z.input<typeof AccountSchema>;
 export type Account = Z.infer<typeof AccountSchema>;
 
 export default class TradingAccountModule extends ClientModule {

@@ -1,17 +1,17 @@
 import { ClientModule } from "../client.ts";
-import { AssetClass, Exchange } from "../common.ts";
+import { AssetClassSchema, ExchangeSchema } from "../common.ts";
 import { Z } from "../external.ts";
-import { Order, OrderSchema, OrderSide } from "./orders.ts";
+import { Order, OrderSchema, OrderSideSchema } from "./orders.ts";
 
 export const PositionSchema = Z.object({
   asset_id: Z.uuid(),
   symbol: Z.string(),
-  exchange: Z.enum(Exchange),
-  asset_class: Z.enum(AssetClass),
+  exchange: ExchangeSchema,
+  asset_class: AssetClassSchema,
   avg_entry_price: Z.coerce.number(),
   qty: Z.coerce.number(),
-  qty_available: Z.coerce.number(),
-  side: Z.enum(OrderSide),
+  qty_available: Z.coerce.number().optional(),
+  side: OrderSideSchema,
   market_value: Z.coerce.number(),
   cost_basis: Z.coerce.number(),
   unrealized_pl: Z.coerce.number(),
@@ -24,11 +24,15 @@ export const PositionSchema = Z.object({
   asset_marginable: Z.boolean(),
 });
 
-export type RawPosition = Z.input<typeof PositionSchema>;
 export type Position = Z.infer<typeof PositionSchema>;
 
-export type ClosePositionQuery = { qty: number } | { percentage: number };
-export type CloseAllPositionsQuery = { cancel_orders: boolean };
+const AllPositionsResponseSchema = PositionSchema.array();
+
+export const ClosePositionQuerySchema = Z.union([
+  Z.object({ qty: Z.number().transform(String) }),
+  Z.object({ percentage: Z.number().transform(String) }),
+]);
+export type ClosePositionQuery = Z.input<typeof ClosePositionQuerySchema>;
 
 export const ClosePositionResponseSchema = Z.object({
   symbol: Z.string(),
@@ -36,8 +40,8 @@ export const ClosePositionResponseSchema = Z.object({
   body: OrderSchema,
 });
 
-export type RawClosePositionResponse = Z.input<typeof ClosePositionResponseSchema>;
 export type ClosePositionResponse = Z.infer<typeof ClosePositionResponseSchema>;
+export const CloseAllPositionsResponseSchema = ClosePositionResponseSchema.array();
 
 export default class TradingPositionsModule extends ClientModule {
   async all(): Promise<Position[]> {
@@ -45,20 +49,21 @@ export default class TradingPositionsModule extends ClientModule {
     if (response.status !== 200)
       throw new Error(`Get All Positions: Undocumented response status: ${response.status} ${response.statusText}`);
 
-    return PositionSchema.array().parse(await response.json());
+    return AllPositionsResponseSchema.parse(await response.json());
   }
 
-  async closeAll(query: CloseAllPositionsQuery): Promise<ClosePositionResponse[]> {
-    const response = await this.client.fetch("v2/positions", "DELETE", { query });
+  async closeAll(cancel_orders = false): Promise<ClosePositionResponse[]> {
+    const response = await this.client.fetch("v2/positions", "DELETE", { query: { cancel_orders } });
     if (response.status === 500) throw new Error("Close All Positions: Failed to liquedate");
     if (response.status !== 207)
       throw new Error(`Close All Positions: Undocumented response status: ${response.status} ${response.statusText}`);
 
-    const parsed = ClosePositionResponseSchema.array().parse(await response.json());
+    const parsed = CloseAllPositionsResponseSchema.parse(await response.json());
+
     const errors = parsed
       .filter(r => r.status !== 200)
       .map(r => new Error(`Close All Positions: Failed to close ${r.symbol}: ${r.status}`));
-    if (errors.length > 0) throw new AggregateError(errors);
+    if (errors.length) throw new AggregateError(errors);
 
     return parsed;
   }

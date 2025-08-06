@@ -5,34 +5,23 @@ export type APIMethod = "GET" | "OPTIONS" | "PUT" | "DELETE" | "POST" | "PATCH";
 /**
  * Supported currencies for trading accounts.
  */
-export enum Currency {
-  /** US Dollar */
-  USD = "USD",
-  /** Placeholder for other currencies */
-  OTHER = "...",
-}
+export const CurrencySchema = Z.union([Z.literal("USD"), Z.literal("...")]);
 
 export type QueryParams = Record<string, string | number | boolean | null>;
 export type BodyParams = Record<string, unknown>;
 
-export enum AssetClass {
-  UsEquity = "us_equity",
-  UsOption = "us_option",
-  Crypto = "crypto",
-}
+export const AssetClassSchema = Z.union([Z.literal("us_equity"), Z.literal("us_option"), Z.literal("crypto")]);
 
-export enum Exchange {
-  AMEX,
-  ARCA,
-  BATS,
-  NYSE,
-  NASDAQ,
-  NYSEARCA,
-  OTC,
-}
+export const ExchangeSchema = Z.union([
+  Z.literal("AMEX"),
+  Z.literal("ARCA"),
+  Z.literal("BATS"),
+  Z.literal("NYSE"),
+  Z.literal("NASDAQ"),
+  Z.literal("NYSEARCA"),
+  Z.literal("OTC"),
+]);
 
 export const AlpacaDateSchema = Z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-export type AlpacaDate = Z.infer<typeof AlpacaDateSchema>;
-
 export const AlpacaTimeSchema = Z.string().regex(/^\d{2}:\d{2}$/);
-export type AlpacaTime = Z.infer<typeof AlpacaTimeSchema>;
+export const AlpacaDateTimeSchema = Z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/);

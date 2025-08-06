@@ -1,143 +1,104 @@
 import { ClientModule } from "../client.ts";
-import { AssetClass, Exchange, QueryParams } from "../common.ts";
+import { AlpacaDateSchema, AssetClassSchema, ExchangeSchema } from "../common.ts";
 import { Z } from "../external.ts";
 
-export enum ActiveStatus {
-  Active = "active",
-  Inactive = "inactive",
-}
+export const ActiveStatusSchema = Z.union([Z.literal("active"), Z.literal("inactive")]);
 
-export enum Attribute {
-  PtpNoException = "ptp_no_exception",
-  PtpWithException = "ptp_with_exception",
-  IPO = "ipo",
-  HasOptions = "has_options",
-  OptionsLateClose = "options_late_close",
-}
+export const AttributeSchema = Z.union([
+  Z.literal("ptp_no_exception"),
+  Z.literal("ptp_with_exception"),
+  Z.literal("ipo"),
+  Z.literal("has_options"),
+  Z.literal("options_late_close"),
+]);
 
-export enum ContractType {
-  Call = "call",
-  Put = "put",
-}
+export const ContractTypeSchema = Z.union([Z.literal("call"), Z.literal("put")]);
 
-export enum ContractStyle {
-  American = "american",
-  European = "european",
-}
+export const ContractStyleSchema = Z.union([Z.literal("american"), Z.literal("european")]);
 
-export enum TreasurySubtype {
-  Bond = "bond",
-  Bill = "bill",
-  Note = "note",
-  Strips = "strips",
-  Tips = "tips",
-  Floating = "floating",
-}
+export const TreasurySubtypeSchema = Z.union([
+  Z.literal("bond"),
+  Z.literal("bill"),
+  Z.literal("note"),
+  Z.literal("strips"),
+  Z.literal("tips"),
+  Z.literal("floating"),
+]);
 
-export enum BondStatus {
-  Outstanding = "outstanding",
-  Matured = "matured",
-  PreIssuance = "pre_issuance",
-}
+export const BondStatusSchema = Z.union([Z.literal("outstanding"), Z.literal("matured"), Z.literal("pre_issuance")]);
 
-export enum DeliverableType {
-  Cash = "cash",
-  Equity = "equity",
-}
+export const DeliverableTypeSchema = Z.union([Z.literal("cash"), Z.literal("equity")]);
 
-export enum SettlementType {
-  T0 = "T+0",
-  T1 = "T+1",
-  T2 = "T+2",
-  T3 = "T+3",
-  T4 = "T+4",
-  T5 = "T+5",
-}
+export const SettlementTypeSchema = Z.union([
+  Z.literal("T+0"),
+  Z.literal("T+1"),
+  Z.literal("T+2"),
+  Z.literal("T+3"),
+  Z.literal("T+4"),
+  Z.literal("T+5"),
+]);
 
-export enum SettlementMethod {
-  BTOB = "BTOB",
-  CADF = "CADF",
-  CAFX = "CAFX",
-  CCC = "CCC",
-}
+export const SettlementMethodSchema = Z.union([
+  Z.literal("BTOB"),
+  Z.literal("CADF"),
+  Z.literal("CAFX"),
+  Z.literal("CCC"),
+]);
 
-export enum CouponType {
-  Fixed = "fixed",
-  Floating = "floating",
-  Zero = "zero",
-}
+export const CouponTypeSchema = Z.union([Z.literal("fixed"), Z.literal("floating"), Z.literal("zero")]);
 
-export enum CouponFrequency {
-  Annual = "annual",
-  SemiAnnual = "semi_annual",
-  Quarterly = "quarterly",
-  Monthly = "monthly",
-  Zero = "zero",
-}
-
-export interface AssetsQuery {
-  status?: ActiveStatus;
-  asset_class?: AssetClass;
-  exchange?: Exchange;
-  attributes?: Attribute[];
-}
-
-export interface OptionContractsQuery {
-  underlying_symbols?: string[];
-  show_deliverables?: boolean;
-  status?: ActiveStatus;
-  expiration_date?: Temporal.PlainDate;
-  expiration_date_gte?: Temporal.PlainDate;
-  expiration_date_lte?: Temporal.PlainDate;
-  root_symbol?: string;
-  type?: ContractType;
-  style?: ContractStyle;
-  strike_price_gte?: number;
-  strike_price_lte?: number;
-  page_token?: string;
-  limit?: number;
-  ppind?: boolean;
-}
-
-export interface TreasuriesQuery {
-  subtype?: TreasurySubtype;
-  bond_status?: BondStatus;
-  cusips?: string[];
-  isins?: string[];
-}
+export const CouponFrequencySchema = Z.union([
+  Z.literal("annual"),
+  Z.literal("semi_annual"),
+  Z.literal("quarterly"),
+  Z.literal("monthly"),
+  Z.literal("zero"),
+]);
 
 export const AssetSchema = Z.object({
   id: Z.uuid(),
-  class: Z.enum(AssetClass),
-  cusip: Z.string().nullable(),
-  exchange: Z.enum(Exchange),
+  class: AssetClassSchema,
+  cusip: Z.string().nullable().optional(),
+  exchange: ExchangeSchema,
   symbol: Z.string(),
-  name: Z.string(),
-  status: Z.enum(ActiveStatus),
+  name: Z.string().regex(/.+/),
+  status: ActiveStatusSchema,
   tradable: Z.boolean(),
   marginable: Z.boolean(),
   shortable: Z.boolean(),
   easy_to_borrow: Z.boolean(),
   fractionable: Z.boolean(),
-  // maintenance_margin_requirement: From.string.float, // deprecated, see margin_requirement_long or margin_requirement_short
-  attributes: Z.array(Z.enum(Attribute)),
-  margin_requirement_long: Z.coerce.number(),
-  margin_requirement_short: Z.coerce.number(),
-});
+  maintenance_margin_requirement: Z.number().optional(), // deprecated, see margin_requirement_long or margin_requirement_short
+  margin_requirement_long: Z.coerce.number().optional(),
+  margin_requirement_short: Z.coerce.number().optional(),
+  attributes: AttributeSchema.array().optional(),
+}).strict();
 
-export type RawAsset = Z.input<typeof AssetSchema>;
 export type Asset = Z.infer<typeof AssetSchema>;
 
+export const AssetsQuerySchema = Z.object({
+  status: ActiveStatusSchema.optional(),
+  asset_class: AssetClassSchema.optional(),
+  exchange: ExchangeSchema.optional(),
+  attributes: AttributeSchema.array()
+    .transform(arr => arr.join(","))
+    .optional(),
+}).strict();
+
+export type AssetsQuery = Z.input<typeof AssetsQuerySchema>;
+
+export const AssetsQueryResponseSchema = AssetSchema.array();
+
 export const DeliverableSchema = Z.object({
-  type: Z.enum(DeliverableType),
+  type: DeliverableTypeSchema,
   symbol: Z.string(),
-  asset_id: Z.string().nullable(),
-  settlement_type: Z.enum(SettlementType),
-  settlement_method: Z.enum(SettlementMethod),
-  delayed_settlement: Z.boolean(),
+  asset_id: Z.uuid().optional(),
   amount: Z.coerce.number(),
   allocation_percentage: Z.coerce.number(),
-});
+  settlement_type: SettlementTypeSchema,
+  settlement_method: SettlementMethodSchema,
+  delayed_settlement: Z.boolean(),
+}).strict();
 
 export type RawDeliverable = Z.input<typeof DeliverableSchema>;
 export type Deliverable = Z.infer<typeof DeliverableSchema>;
@@ -146,65 +107,119 @@ export const OptionContractSchema = Z.object({
   id: Z.uuid(),
   symbol: Z.string(),
   name: Z.string(),
-  status: Z.enum(ActiveStatus),
+  status: ActiveStatusSchema,
   tradable: Z.boolean(),
-  root_symbol: Z.string(),
+  expiration_date: AlpacaDateSchema,
+  root_symbol: Z.string().optional(),
   underlying_symbol: Z.string(),
-  underlying_asset_id: Z.string(),
-  type: Z.enum(ContractType),
-  style: Z.enum(ContractStyle),
-  expiration_date: Z.unknown(), // date
+  underlying_asset_id: Z.uuid(),
+  type: ContractTypeSchema,
+  style: ContractStyleSchema,
   strike_price: Z.coerce.number(),
   multiplier: Z.coerce.number(),
   size: Z.coerce.number(),
-  open_interest: Z.coerce.number(),
-  open_interest_date: Z.unknown(), // date
-  close_price: Z.coerce.number(),
-  close_price_date: Z.unknown(), // date
-  deliverables: Z.array(DeliverableSchema),
-});
+  open_interest: Z.coerce.number().optional(),
+  open_interest_date: AlpacaDateSchema.optional(),
+  close_price: Z.coerce.number().optional(),
+  close_price_date: AlpacaDateSchema.optional(),
+  deliverables: DeliverableSchema.array().optional(),
+}).strict();
 
-export type RawOptionContract = Z.input<typeof OptionContractSchema>;
+export const OptionContractsQuerySchema = Z.object({
+  underlying_symbols: Z.string()
+    .array()
+    .transform(arr => arr.join(","))
+    .optional(),
+  show_deliverables: Z.boolean().optional(),
+  status: ActiveStatusSchema.optional(),
+  expiration_date: AlpacaDateSchema.optional(),
+  expiration_date_gte: AlpacaDateSchema.optional(),
+  expiration_date_lte: AlpacaDateSchema.optional(),
+  root_symbol: Z.string().optional(),
+  type: ContractTypeSchema.optional(),
+  style: ContractStyleSchema.optional(),
+  strike_price_gte: Z.number().optional(),
+  strike_price_lte: Z.number().optional(),
+  page_token: Z.string().optional(),
+  limit: Z.int().max(10000).optional(),
+  ppind: Z.boolean().optional(),
+}).strict();
+
+export type OptionContractsQuery = Z.input<typeof OptionContractsQuerySchema>;
+
+export const OptionContractsQueryResponseSchema = Z.object({
+  option_contracts: OptionContractSchema.array(),
+})
+  .strict()
+  .transform(r => r.option_contracts);
+
 export type OptionContract = Z.infer<typeof OptionContractSchema>;
 
+export const TreasuriesQuerySchema = Z.object({
+  subtype: TreasurySubtypeSchema.optional(),
+  bond_status: BondStatusSchema.optional(),
+  cusips: Z.string()
+    .length(12)
+    .array()
+    .max(1000)
+    .transform(arr => arr.join(","))
+    .optional(),
+  isins: Z.string()
+    .length(12)
+    .array()
+    .max(1000)
+    .transform(arr => arr.join(","))
+    .optional(),
+}).strict();
+
+export type TreasuriesQuery = Z.input<typeof TreasuriesQuerySchema>;
+
 export const TreasurySchema = Z.object({
-  cusip: Z.string(),
-  isin: Z.string(),
-  bond_status: Z.enum(BondStatus),
+  cusip: Z.string().length(12),
+  isin: Z.string().length(12),
+  bond_status: BondStatusSchema,
   tradable: Z.boolean(),
-  subtype: Z.enum(TreasurySubtype),
+  subtype: TreasurySubtypeSchema,
+  issue_date: AlpacaDateSchema,
+  maturity_date: AlpacaDateSchema,
   description: Z.string(),
   description_short: Z.string(),
-  close_price: Z.coerce.number(),
-  close_yield_to_maturity: Z.coerce.number(),
-  close_yield_to_worst: Z.coerce.number(),
+  close_price: Z.coerce.number().optional(),
+  close_price_date: AlpacaDateSchema.optional(),
+  close_yield_to_maturity: Z.coerce.number().optional(),
+  close_yield_to_worst: Z.coerce.number().optional(),
   coupon: Z.coerce.number(),
-  coupon_type: Z.enum(CouponType),
-  coupon_frequency: Z.enum(CouponFrequency),
-  issue_date: Z.unknown(), // date
-  maturity_date: Z.unknown(), // date
-  close_price_date: Z.unknown(), // date
-  first_coupon_date: Z.unknown(), // date
-  next_coupon_date: Z.unknown(), // date
-  last_coupon_date: Z.unknown(), // date
-});
+  coupon_type: CouponTypeSchema,
+  coupon_frequency: CouponFrequencySchema,
+  first_coupon_date: AlpacaDateSchema.optional(),
+  next_coupon_date: AlpacaDateSchema.optional(),
+  last_coupon_date: AlpacaDateSchema.optional(),
+}).strict();
 
-export type RawTreasury = Z.input<typeof TreasurySchema>;
 export type Treasury = Z.infer<typeof TreasurySchema>;
+
+export const TreasuriesQueryResponseSchema = Z.object({
+  us_treasuries: TreasurySchema.array(),
+})
+  .strict()
+  .transform(r => r.us_treasuries);
+
+export type TreasuriesQueryResponse = Z.infer<typeof TreasuriesQueryResponseSchema>;
 
 export default class TradingAssetsModule extends ClientModule {
   async getAssets(query: AssetsQuery) {
-    const preparedQuery = { ...query } as QueryParams;
-    if (query.attributes) preparedQuery.attributes = query.attributes.join(",");
+    const preparedQuery = AssetsQuerySchema.parse(query);
 
     const response = await this.client.fetch("v2/assets", "GET", { query: preparedQuery });
     if (response.status !== 200)
       throw new Error(`Get Assets: Undocumented response status: ${response.status} ${response.statusText}`);
 
-    return AssetSchema.array().parse(await response.json());
+    return AssetsQueryResponseSchema.parse(await response.json());
   }
 
   async getAsset(symbol_or_asset_id: string) {
+    // no query
+
     const response = await this.client.fetch(`v2/assets/${symbol_or_asset_id}`, "GET");
     if (response.status === 404) throw new Error(`Get Asset: 404 Not Found: ${symbol_or_asset_id}`);
     if (response.status !== 200)
@@ -214,16 +229,13 @@ export default class TradingAssetsModule extends ClientModule {
   }
 
   async getOptionContracts(query: OptionContractsQuery) {
-    const preparedQuery = { ...query } as QueryParams;
-    if (query.underlying_symbols) {
-      preparedQuery.underlying_symbols = query.underlying_symbols.join(",");
-    }
+    const preparedQuery = OptionContractsQuerySchema.parse(query);
 
     const response = await this.client.fetch("v2/options/contracts", "GET", { query: preparedQuery });
     if (response.status !== 200)
       throw new Error(`Get Option Contracts: Undocumented response status: ${response.status} ${response.statusText}`);
 
-    return OptionContractSchema.array().parse(await response.json());
+    return OptionContractsQueryResponseSchema.parse(await response.json());
   }
 
   async getOptionContract(symbol_or_id: string) {
@@ -237,9 +249,7 @@ export default class TradingAssetsModule extends ClientModule {
   }
 
   async getTreasuries(query: TreasuriesQuery) {
-    const preparedQuery = { ...query } as QueryParams;
-    if (query.cusips) preparedQuery.cusips = query.cusips.join(",");
-    if (query.isins) preparedQuery.isins = query.isins.join(",");
+    const preparedQuery = TreasuriesQuerySchema.parse(query);
 
     const response = await this.client.fetch("v2/treasuries", "GET", { query: preparedQuery });
     if (response.status === 400) throw new Error(`Get Treasuries: 400 Bad Request: ${response.statusText}`);
@@ -249,6 +259,6 @@ export default class TradingAssetsModule extends ClientModule {
     if (response.status !== 200)
       throw new Error(`Get Treasuries: Undocumented response status: ${response.status} ${response.statusText}`);
 
-    return TreasurySchema.array().parse(await response.json());
+    return TreasuriesQueryResponseSchema.parse(await response.json());
   }
 }

@@ -1,11 +1,9 @@
 import { ClientModule } from "../client.ts";
-import { AlpacaDate, AlpacaDateSchema } from "../common.ts";
+import { AlpacaDateSchema } from "../common.ts";
 import { Z } from "../external.ts";
 
-export enum CalendarDateType {
-  TRADING,
-  SETTLEMENT,
-}
+export const CalendarDateTypeSchema = Z.union([Z.literal("TRADING"), Z.literal("SETTLEMENT")]);
+export type CalendarDateType = Z.infer<typeof CalendarDateTypeSchema>;
 
 export const CalendarDaySchema = Z.object({
   date: Z.string(),
@@ -13,13 +11,9 @@ export const CalendarDaySchema = Z.object({
   close: Z.string(),
   settlement_date: Z.string(),
 });
-
-export type RawCalendarDay = Z.input<typeof CalendarDaySchema>;
 export type CalendarDay = Z.infer<typeof CalendarDaySchema>;
 
 export const CalendarSchema = Z.array(CalendarDaySchema);
-
-export type RawCalendar = Z.input<typeof CalendarSchema>;
 export type Calendar = Z.infer<typeof CalendarSchema>;
 
 export const ClockSchema = Z.object({
@@ -28,29 +22,20 @@ export const ClockSchema = Z.object({
   next_open: Z.string(),
   next_close: Z.string(),
 });
-
-export type RawClock = Z.input<typeof ClockSchema>;
 export type Clock = Z.infer<typeof ClockSchema>;
 
 const CalendarQuerySchema = Z.object({
   start: AlpacaDateSchema.optional(),
   end: AlpacaDateSchema.optional(),
-  date_type: Z.enum(CalendarDateType).optional(),
+  date_type: CalendarDateTypeSchema.optional(),
 });
-
-type CalendarQueryInput = Z.input<typeof CalendarQuerySchema>;
-
-export interface CalendarQuery {
-  start?: AlpacaDate;
-  end?: AlpacaDate;
-  date_type?: CalendarDateType;
-}
+type CalendarQuery = Z.input<typeof CalendarQuerySchema>;
 
 export default class TradingTimeModule extends ClientModule {
-  async calendar(query?: CalendarQueryInput): Promise<Calendar> {
-    const parsed = CalendarQuerySchema.parse(query ?? {});
+  async calendar(query?: CalendarQuery): Promise<Calendar> {
+    const preparedQuery = CalendarQuerySchema.parse(query ?? {});
 
-    const response = await this.client.fetch("v2/calendar", "GET", { query: parsed });
+    const response = await this.client.fetch("v2/calendar", "GET", { query: preparedQuery });
     if (response.status !== 200)
       throw new Error(`Get Calendar: Undocumented response status: ${response.status} ${response.statusText}`);
 
