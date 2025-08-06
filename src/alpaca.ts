@@ -1,7 +1,6 @@
-import { loadSync } from "https://deno.land/std@0.224.0/dotenv/mod.ts";
-
 import { AlpacaClient, AlpacaConfig } from "./client.ts";
 import { APIMethod, BodyParams, QueryParams } from "./common.ts";
+import { loadSync } from "./external.ts";
 import {
   TradingAccountModule,
   TradingAssetsModule,
