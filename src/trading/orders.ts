@@ -1,5 +1,5 @@
 import { ClientModule } from "../client.ts";
-import { AlpacaDateTimeSchema, AssetClassSchema, QueryParams } from "../common.ts";
+import { AlpacaDateTimeSchema, AssetClassSchema } from "../common.ts";
 import { Z } from "../external.ts";
 
 export const OrderClassSchema = Z.union([
@@ -155,72 +155,119 @@ export const DeleteAllOrdersResponseSchema = Z.object({
   .array();
 
 export default class TradingOrdersModule extends ClientModule {
-  async create(body: CreateOrderBody) {
-    const preparedBody = CreateOrderBodySchema.parse(body);
+  create(body: CreateOrderBody) {
+    return this.client.fetch({
+      name: "Create Order",
+      endpoint: "v2/orders",
+      method: "POST",
 
-    const response = await this.client.fetch("v2/orders", "POST", { body: preparedBody });
-    if (response.status === 403) throw new Error("Create Order: 403 Buying power or shares is not sufficient");
-    if (response.status === 422) throw new Error("Create Order: 422 Input parameters are not recognized");
-    if (response.status !== 200)
-      throw new Error(`Create Order: Undocumented response status: ${response.status} ${response.statusText}`);
+      querySchema: Z.never(),
+      bodySchema: CreateOrderBodySchema,
+      responseSchema: OrderSchema,
 
-    return OrderSchema.parse(await response.json());
+      okStatus: 200,
+      statusMessages: {
+        403: "Create Order: 403 Buying power or shares is not sufficient",
+        422: "Create Order: 422 Input parameters are not recognized",
+      },
+
+      payload: { body },
+    });
   }
 
-  async search(query: OrdersQuery) {
-    const preparedQuery = OrdersQuerySchema.parse(query);
+  search(query: OrdersQuery) {
+    return this.client.fetch({
+      name: "Get Orders",
+      endpoint: "v2/orders",
+      method: "GET",
 
-    const response = await this.client.fetch("v2/orders", "GET", { query: preparedQuery });
-    if (response.status !== 200)
-      throw new Error(`Get Orders: Undocumented response status: ${response.status} ${response.statusText}`);
+      querySchema: OrdersQuerySchema,
+      bodySchema: Z.never(),
+      responseSchema: OrdersQueryResponseSchema,
 
-    return OrderSchema.array().parse(await response.json());
+      okStatus: 200,
+      statusMessages: {},
+
+      payload: { query },
+    });
   }
 
-  async deleteAll() {
-    const response = await this.client.fetch("v2/orders", "DELETE");
-    if (response.status !== 207)
-      throw new Error(`Delete All Orders: Undocumented response status: ${response.status} ${response.statusText}`);
+  deleteAll() {
+    return this.client
+      .fetch({
+        name: "Delete All Orders",
+        endpoint: "v2/orders",
+        method: "DELETE",
 
-    const parsed = DeleteAllOrdersResponseSchema.parse(await response.json());
+        querySchema: Z.never(),
+        bodySchema: Z.never(),
+        responseSchema: DeleteAllOrdersResponseSchema,
 
-    const errors = parsed
-      .filter(order => order.status !== 200)
-      .map(order => new Error(`Delete All Orders: Failed to delete order ${order.id}: ${order.status}`));
-    if (errors) throw new AggregateError(errors, "Delete All Orders: Some orders failed to delete");
+        okStatus: 207,
+        statusMessages: {},
 
-    return parsed;
+        payload: {},
+      })
+      .then(parsed => {
+        const errors = parsed
+          .filter(order => order.status !== 200)
+          .map(order => new Error(`Delete All Orders: Failed to delete order ${order.id}: ${order.status}`));
+        if (errors) throw new AggregateError(errors, "Delete All Orders: Some orders failed to delete");
+
+        return parsed;
+      });
   }
 
-  async getByClientID(client_order_id: string) {
-    const preparedQuery: QueryParams = { client_order_id };
+  getByClientID(client_order_id: string) {
+    return this.client.fetch({
+      name: "Get Order by Client ID",
+      endpoint: "v2/orders:by_client_order_id",
+      method: "GET",
 
-    const response = await this.client.fetch("v2/orders:by_client_order_id", "GET", { query: preparedQuery });
-    if (response.status !== 200)
-      throw new Error(
-        `Get Order by Client ID: Undocumented response status: ${response.status} ${response.statusText}`
-      );
+      querySchema: Z.object({ client_order_id: Z.string().max(128) }).strict(),
+      bodySchema: Z.never(),
+      responseSchema: OrderSchema,
 
-    return OrderSchema.parse(await response.json());
+      okStatus: 200,
+      statusMessages: {},
+
+      payload: { query: { client_order_id } },
+    });
   }
 
-  async get(order_id: string, nested?: boolean) {
-    const preparedQuery: QueryParams = {};
-    if (nested) preparedQuery.nested = nested.toString();
+  get(order_id: string, nested?: boolean) {
+    return this.client.fetch({
+      name: "Get Order",
+      endpoint: `v2/orders/${order_id}`,
+      method: "GET",
 
-    const response = await this.client.fetch(`v2/orders/${order_id}`, "GET", { query: preparedQuery });
-    if (response.status !== 200)
-      throw new Error(`Get Order: Undocumented response status: ${response.status} ${response.statusText}`);
+      querySchema: Z.object({ nested: Z.boolean().optional() }).strict(),
+      bodySchema: Z.never(),
+      responseSchema: OrderSchema,
 
-    return OrderSchema.parse(await response.json());
+      okStatus: 200,
+      statusMessages: {},
+
+      payload: { query: { nested } },
+    });
   }
 
-  async _replace(_order_id: string, _body: CreateOrderBody) {}
+  delete(order_id: string) {
+    return this.client.fetch({
+      name: "Delete Order",
+      endpoint: `v2/orders/${order_id}`,
+      method: "DELETE",
 
-  async delete(order_id: string) {
-    const response = await this.client.fetch(`v2/orders/${order_id}`, "DELETE");
-    if (response.status === 422) throw new Error("Delete Order: 422 The order status is not cancelable");
-    if (response.status !== 204)
-      throw new Error(`Delete Order: Undocumented response status: ${response.status} ${response.statusText}`);
+      querySchema: Z.never(),
+      bodySchema: Z.never(),
+      responseSchema: Z.never(),
+
+      okStatus: 204,
+      statusMessages: {
+        422: "Delete Order: 422 The order status is not cancelable",
+      },
+
+      payload: {},
+    });
   }
 }

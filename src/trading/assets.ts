@@ -207,58 +207,96 @@ export const TreasuriesQueryResponseSchema = Z.object({
 export type TreasuriesQueryResponse = Z.infer<typeof TreasuriesQueryResponseSchema>;
 
 export default class TradingAssetsModule extends ClientModule {
-  async getAssets(query: AssetsQuery) {
-    const preparedQuery = AssetsQuerySchema.parse(query);
+  getAssets(query: AssetsQuery) {
+    return this.client.fetch({
+      name: "Get Assets",
+      endpoint: "v2/assets",
+      method: "GET",
 
-    const response = await this.client.fetch("v2/assets", "GET", { query: preparedQuery });
-    if (response.status !== 200)
-      throw new Error(`Get Assets: Undocumented response status: ${response.status} ${response.statusText}`);
+      querySchema: AssetsQuerySchema,
+      bodySchema: Z.never(),
+      responseSchema: AssetsQueryResponseSchema,
 
-    return AssetsQueryResponseSchema.parse(await response.json());
+      okStatus: 200,
+      statusMessages: {},
+
+      payload: { query },
+    });
   }
 
-  async getAsset(symbol_or_asset_id: string) {
-    // no query
+  getAsset(symbol_or_asset_id: string) {
+    return this.client.fetch({
+      name: "Get Asset",
+      endpoint: `v2/assets/${symbol_or_asset_id}`,
+      method: "GET",
 
-    const response = await this.client.fetch(`v2/assets/${symbol_or_asset_id}`, "GET");
-    if (response.status === 404) throw new Error(`Get Asset: 404 Not Found: ${symbol_or_asset_id}`);
-    if (response.status !== 200)
-      throw new Error(`Get Asset: Undocumented response status: ${response.status} ${response.statusText}`);
+      querySchema: Z.never(),
+      bodySchema: Z.never(),
+      responseSchema: AssetSchema,
 
-    return AssetSchema.parse(await response.json());
+      okStatus: 200,
+      statusMessages: {
+        404: `Asset Not Found: ${symbol_or_asset_id}`,
+      },
+
+      payload: {},
+    });
   }
 
-  async getOptionContracts(query: OptionContractsQuery) {
-    const preparedQuery = OptionContractsQuerySchema.parse(query);
+  getOptionContracts(query: OptionContractsQuery) {
+    return this.client.fetch({
+      name: "Get Option Contracts",
+      endpoint: "v2/options/contracts",
+      method: "GET",
 
-    const response = await this.client.fetch("v2/options/contracts", "GET", { query: preparedQuery });
-    if (response.status !== 200)
-      throw new Error(`Get Option Contracts: Undocumented response status: ${response.status} ${response.statusText}`);
+      querySchema: OptionContractsQuerySchema,
+      bodySchema: Z.never(),
+      responseSchema: OptionContractsQueryResponseSchema,
 
-    return OptionContractsQueryResponseSchema.parse(await response.json());
+      okStatus: 200,
+      statusMessages: {},
+
+      payload: { query },
+    });
   }
 
-  async getOptionContract(symbol_or_id: string) {
-    const response = await this.client.fetch(`v2/options/contracts/${symbol_or_id}`, "GET");
+  getOptionContract(symbol_or_id: string) {
+    return this.client.fetch({
+      name: "Get Option Contract",
+      endpoint: `v2/options/contracts/${symbol_or_id}`,
+      method: "GET",
 
-    if (response.status === 404) throw new Error(`Get Option Contract: 404 Not Found: ${symbol_or_id}`);
-    if (response.status !== 200)
-      throw new Error(`Get Option Contract: Undocumented response status: ${response.status} ${response.statusText}`);
+      querySchema: Z.never(),
+      bodySchema: Z.never(),
+      responseSchema: OptionContractSchema,
 
-    return OptionContractSchema.parse(await response.json());
+      okStatus: 200,
+      statusMessages: {
+        404: `Option Contract Not Found: ${symbol_or_id}`,
+      },
+
+      payload: {},
+    });
   }
 
-  async getTreasuries(query: TreasuriesQuery) {
-    const preparedQuery = TreasuriesQuerySchema.parse(query);
+  getTreasuries(query: TreasuriesQuery) {
+    return this.client.fetch({
+      name: "Get Treasuries",
+      endpoint: "v2/treasuries",
+      method: "GET",
 
-    const response = await this.client.fetch("v2/treasuries", "GET", { query: preparedQuery });
-    if (response.status === 400) throw new Error(`Get Treasuries: 400 Bad Request: ${response.statusText}`);
-    if (response.status === 403) throw new Error(`Get Treasuries: 403 Forbidden: ${response.statusText}`);
-    if (response.status === 429) throw new Error(`Get Treasuries: 429 Too Many Requests: ${response.statusText}`);
-    if (response.status === 500) throw new Error(`Get Treasuries: 500 Internal Server Error: ${response.statusText}`);
-    if (response.status !== 200)
-      throw new Error(`Get Treasuries: Undocumented response status: ${response.status} ${response.statusText}`);
+      querySchema: TreasuriesQuerySchema,
+      bodySchema: Z.never(),
+      responseSchema: TreasuriesQueryResponseSchema,
 
-    return TreasuriesQueryResponseSchema.parse(await response.json());
+      okStatus: 200,
+      statusMessages: {
+        400: "Bad Request",
+        403: "Forbidden",
+        429: "Too Many Requests",
+        500: "Internal Server Error",
+      },
+      payload: { query },
+    });
   }
 }

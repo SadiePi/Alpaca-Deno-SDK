@@ -86,12 +86,21 @@ const AccountSchema = Z.object({
 export type Account = Z.infer<typeof AccountSchema>;
 
 export default class TradingAccountModule extends ClientModule {
-  async get(): Promise<Account> {
-    const response = await this.client.fetch("v2/account", "GET");
-    if (response.status !== 200)
-      throw new Error(`Get Account: Undocumented response status ${response.status} ${response.statusText}`);
+  get(): Promise<Account> {
+    return this.client.fetch({
+      name: "Get Account",
+      endpoint: "v2/account",
+      method: "GET",
 
-    return AccountSchema.parse(await response.json());
+      querySchema: Z.never(),
+      bodySchema: Z.never(),
+      responseSchema: AccountSchema,
+
+      okStatus: 200,
+      statusMessages: {},
+
+      payload: {},
+    });
   }
 
   _configs() {}

@@ -1,5 +1,5 @@
 import { ClientModule } from "../client.ts";
-import { AlpacaDateSchema } from "../common.ts";
+import { AlpacaDateSchema, AlpacaDateTimeSchema } from "../common.ts";
 import { Z } from "../external.ts";
 
 export const CalendarDateTypeSchema = Z.union([Z.literal("TRADING"), Z.literal("SETTLEMENT")]);
@@ -17,10 +17,10 @@ export const CalendarSchema = Z.array(CalendarDaySchema);
 export type Calendar = Z.infer<typeof CalendarSchema>;
 
 export const ClockSchema = Z.object({
-  timestamp: Z.string(),
+  timestamp: AlpacaDateTimeSchema,
   is_open: Z.boolean(),
-  next_open: Z.string(),
-  next_close: Z.string(),
+  next_open: AlpacaDateTimeSchema,
+  next_close: AlpacaDateTimeSchema,
 });
 export type Clock = Z.infer<typeof ClockSchema>;
 
@@ -32,21 +32,37 @@ const CalendarQuerySchema = Z.object({
 type CalendarQuery = Z.input<typeof CalendarQuerySchema>;
 
 export default class TradingTimeModule extends ClientModule {
-  async calendar(query?: CalendarQuery): Promise<Calendar> {
-    const preparedQuery = CalendarQuerySchema.parse(query ?? {});
+  calendar(query: CalendarQuery = {}): Promise<Calendar> {
+    return this.client.fetch({
+      name: "Get Market Calendar",
+      endpoint: "v2/calendar",
+      method: "GET",
 
-    const response = await this.client.fetch("v2/calendar", "GET", { query: preparedQuery });
-    if (response.status !== 200)
-      throw new Error(`Get Calendar: Undocumented response status: ${response.status} ${response.statusText}`);
+      querySchema: CalendarQuerySchema,
+      bodySchema: Z.never(),
+      responseSchema: CalendarSchema,
 
-    return CalendarSchema.parse(await response.json());
+      okStatus: 200,
+      statusMessages: {},
+
+      payload: { query },
+    });
   }
 
-  async clock(): Promise<Clock> {
-    const response = await this.client.fetch("v2/clock", "GET");
-    if (response.status !== 200)
-      throw new Error(`Get Clock: Undocumented response status: ${response.status} ${response.statusText}`);
+  clock(): Promise<Clock> {
+    return this.client.fetch({
+      name: "Get Market Clock",
+      endpoint: "v2/clock",
+      method: "GET",
 
-    return ClockSchema.parse(await response.json());
+      querySchema: Z.never(),
+      bodySchema: Z.never(),
+      responseSchema: ClockSchema,
+
+      okStatus: 200,
+      statusMessages: {},
+
+      payload: {},
+    });
   }
 }

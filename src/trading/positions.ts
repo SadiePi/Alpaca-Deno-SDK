@@ -44,56 +44,101 @@ export type ClosePositionResponse = Z.infer<typeof ClosePositionResponseSchema>;
 export const CloseAllPositionsResponseSchema = ClosePositionResponseSchema.array();
 
 export default class TradingPositionsModule extends ClientModule {
-  async all(): Promise<Position[]> {
-    const response = await this.client.fetch("v2/positions", "GET");
-    if (response.status !== 200)
-      throw new Error(`Get All Positions: Undocumented response status: ${response.status} ${response.statusText}`);
+  all(): Promise<Position[]> {
+    return this.client.fetch({
+      name: "Get All Positions",
+      endpoint: "v2/positions",
+      method: "GET",
 
-    return AllPositionsResponseSchema.parse(await response.json());
+      querySchema: Z.never(),
+      bodySchema: Z.never(),
+      responseSchema: AllPositionsResponseSchema,
+
+      okStatus: 200,
+      statusMessages: {},
+
+      payload: {},
+    });
   }
 
-  async closeAll(cancel_orders = false): Promise<ClosePositionResponse[]> {
-    const response = await this.client.fetch("v2/positions", "DELETE", { query: { cancel_orders } });
-    if (response.status === 500) throw new Error("Close All Positions: Failed to liquedate");
-    if (response.status !== 207)
-      throw new Error(`Close All Positions: Undocumented response status: ${response.status} ${response.statusText}`);
+  closeAll(cancel_orders = false): Promise<ClosePositionResponse[]> {
+    return this.client
+      .fetch({
+        name: "Close All Positions",
+        endpoint: "v2/positions",
+        method: "DELETE",
 
-    const parsed = CloseAllPositionsResponseSchema.parse(await response.json());
+        querySchema: Z.object({ cancel_orders: Z.boolean().optional() }),
+        bodySchema: Z.never(),
+        responseSchema: CloseAllPositionsResponseSchema,
 
-    const errors = parsed
-      .filter(r => r.status !== 200)
-      .map(r => new Error(`Close All Positions: Failed to close ${r.symbol}: ${r.status}`));
-    if (errors.length) throw new AggregateError(errors);
+        okStatus: 207,
+        statusMessages: {
+          500: "Close All Positions: Failed to liquedate",
+        },
 
-    return parsed;
+        payload: { query: { cancel_orders } },
+      })
+      .then(parsed => {
+        const errors = parsed
+          .filter(r => r.status !== 200)
+          .map(r => new Error(`Close All Positions: Failed to close ${r.symbol}: ${r.status}`));
+        if (errors.length) throw new AggregateError(errors);
+        return parsed;
+      });
   }
 
-  async get(symbol_or_asset_id: string): Promise<Position> {
-    const response = await this.client.fetch(`v2/positions/${symbol_or_asset_id}`, "GET");
-    if (response.status !== 200)
-      throw new Error(`Get Position: Undocumented response status: ${response.status} ${response.statusText}`);
+  get(symbol_or_asset_id: string): Promise<Position> {
+    return this.client.fetch({
+      name: "Get Position",
+      endpoint: `v2/positions/${symbol_or_asset_id}`,
+      method: "GET",
 
-    return PositionSchema.parse(await response.json());
+      querySchema: Z.never(),
+      bodySchema: Z.never(),
+      responseSchema: PositionSchema,
+
+      okStatus: 200,
+      statusMessages: {},
+
+      payload: {},
+    });
   }
 
-  async close(symbol_or_asset_id: string, query: ClosePositionQuery): Promise<Order> {
-    const response = await this.client.fetch(`v2/positions/${symbol_or_asset_id}`, "DELETE", { query });
-    if (response.status !== 200)
-      throw new Error(`Close Position: Undocumented response status: ${response.status} ${response.statusText}`);
+  close(symbol_or_asset_id: string, query: ClosePositionQuery): Promise<Order> {
+    return this.client.fetch({
+      name: "Close Position",
+      endpoint: `v2/positions/${symbol_or_asset_id}`,
+      method: "DELETE",
 
-    return OrderSchema.parse(await response.json());
+      querySchema: ClosePositionQuerySchema,
+      bodySchema: Z.never(),
+      responseSchema: OrderSchema,
+
+      okStatus: 200,
+      statusMessages: {},
+
+      payload: { query },
+    });
   }
 
-  async exercise(symbol_or_contract_id: string): Promise<void> {
-    const response = await this.client.fetch(`v2/positions/${symbol_or_contract_id}/exercise`, "POST");
-    if (response.status === 403)
-      throw new Error(`Exercise Options Position: Available position quantity is not sufficient: ${response.status}`);
-    if (response.status === 422)
-      throw new Error(`Exercise Options Position: One or more parameters provided are invalid: ${response.status}`);
-    if (response.status !== 200)
-      throw new Error(
-        `Exercise Options Position: Undocumented response status: ${response.status} ${response.statusText}`
-      );
-    // no response body
+  exercise(symbol_or_contract_id: string): Promise<void> {
+    return this.client.fetch({
+      name: "Exercise Options Position",
+      endpoint: `v2/positions/${symbol_or_contract_id}/exercise`,
+      method: "POST",
+
+      querySchema: Z.never(),
+      bodySchema: Z.never(),
+      responseSchema: Z.never(),
+
+      okStatus: 200,
+      statusMessages: {
+        403: "Exercise Options Position: Available position quantity is not sufficient",
+        422: "Exercise Options Position: One or more parameters provided are invalid",
+      },
+
+      payload: {},
+    });
   }
 }
