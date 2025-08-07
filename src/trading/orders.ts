@@ -130,8 +130,10 @@ export const DeleteAllOrdersResponseSchema = Z.object({
   .strict()
   .array();
 
+export type DeleteAllOrdersResponse = Z.infer<typeof DeleteAllOrdersResponseSchema>;
+
 export default class TradingOrdersModule extends ClientModule {
-  create(body: CreateOrderBody) {
+  create(body: CreateOrderBody): Promise<Order> {
     return this.client.fetch({
       name: "Create Order",
       endpoint: "v2/orders",
@@ -151,7 +153,7 @@ export default class TradingOrdersModule extends ClientModule {
     });
   }
 
-  search(query: OrdersQuery) {
+  search(query: OrdersQuery): Promise<Order[]> {
     return this.client.fetch({
       name: "Get Orders",
       endpoint: "v2/orders",
@@ -168,7 +170,7 @@ export default class TradingOrdersModule extends ClientModule {
     });
   }
 
-  deleteAll() {
+  deleteAll(): Promise<DeleteAllOrdersResponse> {
     return this.client
       .fetch({
         name: "Delete All Orders",
@@ -194,7 +196,7 @@ export default class TradingOrdersModule extends ClientModule {
       });
   }
 
-  getByClientID(client_order_id: string) {
+  getByClientID(client_order_id: string): Promise<Order> {
     return this.client.fetch({
       name: "Get Order by Client ID",
       endpoint: "v2/orders:by_client_order_id",
@@ -211,7 +213,7 @@ export default class TradingOrdersModule extends ClientModule {
     });
   }
 
-  get(order_id: string, nested?: boolean) {
+  get(order_id: string, nested?: boolean): Promise<Order> {
     return this.client.fetch({
       name: "Get Order",
       endpoint: `v2/orders/${order_id}`,
@@ -228,7 +230,7 @@ export default class TradingOrdersModule extends ClientModule {
     });
   }
 
-  delete(order_id: string) {
+  delete(order_id: string): Promise<void> {
     return this.client.fetch({
       name: "Delete Order",
       endpoint: `v2/orders/${order_id}`,

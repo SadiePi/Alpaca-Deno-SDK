@@ -51,9 +51,9 @@ export const AssetsQuerySchema = Z.object({
     .optional(),
 }).strict();
 
-export type AssetsQuery = Z.input<typeof AssetsQuerySchema>;
-
 export const AssetsQueryResponseSchema = AssetSchema.array();
+
+export type AssetsQuery = Z.input<typeof AssetsQuerySchema>;
 
 export const DeliverableSchema = Z.object({
   type: DeliverableTypeSchema,
@@ -66,7 +66,6 @@ export const DeliverableSchema = Z.object({
   delayed_settlement: Z.boolean(),
 }).strict();
 
-export type RawDeliverable = Z.input<typeof DeliverableSchema>;
 export type Deliverable = Z.infer<typeof DeliverableSchema>;
 
 export const OptionContractSchema = Z.object({
@@ -170,10 +169,8 @@ export const TreasuriesQueryResponseSchema = Z.object({
   .strict()
   .transform(r => r.us_treasuries);
 
-export type TreasuriesQueryResponse = Z.infer<typeof TreasuriesQueryResponseSchema>;
-
 export default class TradingAssetsModule extends ClientModule {
-  getAssets(query: AssetsQuery) {
+  getAssets(query: AssetsQuery): Promise<Asset[]> {
     return this.client.fetch({
       name: "Get Assets",
       endpoint: "v2/assets",
@@ -190,7 +187,7 @@ export default class TradingAssetsModule extends ClientModule {
     });
   }
 
-  getAsset(symbol_or_asset_id: string) {
+  getAsset(symbol_or_asset_id: string): Promise<Asset> {
     return this.client.fetch({
       name: "Get Asset",
       endpoint: `v2/assets/${symbol_or_asset_id}`,
@@ -209,7 +206,7 @@ export default class TradingAssetsModule extends ClientModule {
     });
   }
 
-  getOptionContracts(query: OptionContractsQuery) {
+  getOptionContracts(query: OptionContractsQuery): Promise<OptionContract[]> {
     return this.client.fetch({
       name: "Get Option Contracts",
       endpoint: "v2/options/contracts",
@@ -226,7 +223,7 @@ export default class TradingAssetsModule extends ClientModule {
     });
   }
 
-  getOptionContract(symbol_or_id: string) {
+  getOptionContract(symbol_or_id: string): Promise<OptionContract> {
     return this.client.fetch({
       name: "Get Option Contract",
       endpoint: `v2/options/contracts/${symbol_or_id}`,
@@ -245,7 +242,7 @@ export default class TradingAssetsModule extends ClientModule {
     });
   }
 
-  getTreasuries(query: TreasuriesQuery) {
+  getTreasuries(query: TreasuriesQuery): Promise<Treasury[]> {
     return this.client.fetch({
       name: "Get Treasuries",
       endpoint: "v2/treasuries",

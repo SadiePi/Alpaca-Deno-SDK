@@ -24,7 +24,6 @@ export const AccountStatusSchema = Z.enum([
   "ACTIVE",
   "REJECTED",
 ]);
-export type AccountStatus = Z.infer<typeof AccountStatusSchema>;
 
 /** The effective options trading level of the account */
 export enum OptionsTradingLevel {
