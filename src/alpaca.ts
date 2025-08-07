@@ -1,4 +1,4 @@
-import { AlpacaClient, AlpacaConfig } from "./client.ts";
+import { AlpacaAuth, AlpacaClient, AlpacaConfig } from "./client.ts";
 import { APIMethod, BodyParams, QueryParams } from "./common.ts";
 import { loadSync } from "./external.ts";
 import {
@@ -13,7 +13,10 @@ import {
 } from "./trading/mod.ts";
 
 export default class Alpaca {
-  constructor(public config: AlpacaConfig) {}
+  private auth: AlpacaAuth;
+  constructor(public config: AlpacaConfig) {
+    this.auth = config.auth ?? (loadSync() as unknown as AlpacaAuth);
+  }
 
   public readonly trading = new TradingClient(this);
   public readonly market = new MarketClient(this);
@@ -27,14 +30,12 @@ export default class Alpaca {
       body?: BodyParams;
     }
   ) {
-    const auth = this.config.auth ?? loadSync();
-
     const requestInit: RequestInit = {
       method,
       headers: {
         accept: "application/json",
-        "APCA-API-KEY-ID": auth.key,
-        "APCA-API-SECRET-KEY": auth.secret,
+        "APCA-API-KEY-ID": this.auth.key,
+        "APCA-API-SECRET-KEY": this.auth.secret,
       },
     };
 
