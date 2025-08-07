@@ -2,7 +2,7 @@ import { ClientModule } from "../client.ts";
 import { AlpacaDateSchema, AlpacaDateTimeSchema } from "../common.ts";
 import { Z } from "../external.ts";
 
-export const CalendarDateTypeSchema = Z.union([Z.literal("TRADING"), Z.literal("SETTLEMENT")]);
+export const CalendarDateTypeSchema = Z.enum(["TRADING", "SETTLEMENT"]);
 export type CalendarDateType = Z.infer<typeof CalendarDateTypeSchema>;
 
 export const CalendarDaySchema = Z.object({

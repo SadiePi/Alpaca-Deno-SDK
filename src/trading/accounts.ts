@@ -15,14 +15,14 @@ import { Z } from "../external.ts";
  * - ACTIVE: The account is active for trading
  * - REJECTED: The account application has been rejected
  */
-export const AccountStatusSchema = Z.union([
-  Z.literal("ONBOARDING"),
-  Z.literal("SUBMISSION_FAILED"),
-  Z.literal("SUBMITTED"),
-  Z.literal("ACCOUNT_UPDATED"),
-  Z.literal("APPROVAL_PENDING"),
-  Z.literal("ACTIVE"),
-  Z.literal("REJECTED"),
+export const AccountStatusSchema = Z.enum([
+  "ONBOARDING",
+  "SUBMISSION_FAILED",
+  "SUBMITTED",
+  "ACCOUNT_UPDATED",
+  "APPROVAL_PENDING",
+  "ACTIVE",
+  "REJECTED",
 ]);
 export type AccountStatus = Z.infer<typeof AccountStatusSchema>;
 

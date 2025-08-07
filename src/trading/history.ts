@@ -46,7 +46,7 @@ export const ActivityTypesSchema = Z.enum([
   "SPLIT",
 ]);
 
-export const HistoryCashflowTypesSchema = Z.union([ActivityTypesSchema, Z.literal("ALL"), Z.literal("NONE")]);
+export const HistoryCashflowTypesSchema = Z.union([ActivityTypesSchema, Z.enum(["ALL", "NONE"])]);
 
 export const HistoryQuerySchema = Z.object({
   period: HistoryPeriodSchema.optional(),

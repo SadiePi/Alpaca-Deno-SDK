@@ -2,58 +2,24 @@ import { ClientModule } from "../client.ts";
 import { AlpacaDateSchema, AssetClassSchema, ExchangeSchema } from "../common.ts";
 import { Z } from "../external.ts";
 
-export const ActiveStatusSchema = Z.union([Z.literal("active"), Z.literal("inactive")]);
-
-export const AttributeSchema = Z.union([
-  Z.literal("ptp_no_exception"),
-  Z.literal("ptp_with_exception"),
-  Z.literal("ipo"),
-  Z.literal("has_options"),
-  Z.literal("options_late_close"),
+export const AttributeSchema = Z.enum([
+  "ptp_no_exception",
+  "ptp_with_exception",
+  "ipo",
+  "has_options",
+  "options_late_close",
 ]);
 
-export const ContractTypeSchema = Z.union([Z.literal("call"), Z.literal("put")]);
-
-export const ContractStyleSchema = Z.union([Z.literal("american"), Z.literal("european")]);
-
-export const TreasurySubtypeSchema = Z.union([
-  Z.literal("bond"),
-  Z.literal("bill"),
-  Z.literal("note"),
-  Z.literal("strips"),
-  Z.literal("tips"),
-  Z.literal("floating"),
-]);
-
-export const BondStatusSchema = Z.union([Z.literal("outstanding"), Z.literal("matured"), Z.literal("pre_issuance")]);
-
-export const DeliverableTypeSchema = Z.union([Z.literal("cash"), Z.literal("equity")]);
-
-export const SettlementTypeSchema = Z.union([
-  Z.literal("T+0"),
-  Z.literal("T+1"),
-  Z.literal("T+2"),
-  Z.literal("T+3"),
-  Z.literal("T+4"),
-  Z.literal("T+5"),
-]);
-
-export const SettlementMethodSchema = Z.union([
-  Z.literal("BTOB"),
-  Z.literal("CADF"),
-  Z.literal("CAFX"),
-  Z.literal("CCC"),
-]);
-
-export const CouponTypeSchema = Z.union([Z.literal("fixed"), Z.literal("floating"), Z.literal("zero")]);
-
-export const CouponFrequencySchema = Z.union([
-  Z.literal("annual"),
-  Z.literal("semi_annual"),
-  Z.literal("quarterly"),
-  Z.literal("monthly"),
-  Z.literal("zero"),
-]);
+export const ActiveStatusSchema = Z.enum(["active", "inactive", "suspended", "delisted"]);
+export const ContractTypeSchema = Z.enum(["call", "put"]);
+export const ContractStyleSchema = Z.enum(["american", "european"]);
+export const TreasurySubtypeSchema = Z.enum(["bond", "bill", "note", "strips", "tips", "floating"]);
+export const BondStatusSchema = Z.enum(["outstanding", "matured", "pre_issuance"]);
+export const DeliverableTypeSchema = Z.enum(["cash", "equity"]);
+export const SettlementTypeSchema = Z.enum(["T+0", "T+1", "T+2", "T+3", "T+4", "T+5"]);
+export const SettlementMethodSchema = Z.enum(["BTOB", "CADF", "CAFX", "CCC"]);
+export const CouponTypeSchema = Z.enum(["fixed", "floating", "zero"]);
+export const CouponFrequencySchema = Z.enum(["annual", "semi_annual", "quarterly", "monthly", "zero"]);
 
 export const AssetSchema = Z.object({
   id: Z.uuid(),

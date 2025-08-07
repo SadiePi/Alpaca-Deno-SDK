@@ -2,61 +2,37 @@ import { ClientModule } from "../client.ts";
 import { AlpacaDateTimeSchema, AssetClassSchema } from "../common.ts";
 import { Z } from "../external.ts";
 
-export const OrderClassSchema = Z.union([
-  Z.literal("simple"),
-  Z.literal("bracket"),
-  Z.literal("oco"),
-  Z.literal("oto"),
-  Z.literal("mleg"),
-]);
+export const OrderClassSchema = Z.enum(["simple", "bracket", "oco", "oto", "mleg"]);
 
-export const OrderSideSchema = Z.union([Z.literal("buy"), Z.literal("sell")]);
+export const OrderSideSchema = Z.enum(["buy", "sell"]);
 
-export const OrderTypeSchema = Z.union([
-  Z.literal("market"),
-  Z.literal("limit"),
-  Z.literal("stop"),
-  Z.literal("stop_limit"),
-  Z.literal("trailing_stop"),
-]);
+export const OrderTypeSchema = Z.enum(["market", "limit", "stop", "stop_limit", "trailing_stop"]);
 
-export const TimeInForceSchema = Z.union([
-  Z.literal("day"),
-  Z.literal("gtc"),
-  Z.literal("opg"),
-  Z.literal("cls"),
-  Z.literal("ioc"),
-  Z.literal("fok"),
-]);
+export const TimeInForceSchema = Z.enum(["day", "gtc", "opg", "cls", "ioc", "fok"]);
 
-export const PositionIntentSchema = Z.union([
-  Z.literal("buy_to_open"),
-  Z.literal("buy_to_close"),
-  Z.literal("sell_to_open"),
-  Z.literal("sell_to_close"),
-]);
+export const PositionIntentSchema = Z.enum(["buy_to_open", "buy_to_close", "sell_to_open", "sell_to_close"]);
 
-export const OrderQueryStatusSchema = Z.union([Z.literal("open"), Z.literal("closed")]);
+export const OrderQueryStatusSchema = Z.enum(["open", "closed"]);
 
-export const OrderQueryDirectionSchema = Z.union([Z.literal("asc"), Z.literal("desc")]);
+export const OrderQueryDirectionSchema = Z.enum(["asc", "desc"]);
 
-export const OrderStatusSchema = Z.union([
-  Z.literal("new"),
-  Z.literal("partially_filled"),
-  Z.literal("filled"),
-  Z.literal("done_for_day"),
-  Z.literal("canceled"),
-  Z.literal("expired"),
-  Z.literal("replaced"),
-  Z.literal("pending_cancel"),
-  Z.literal("pending_replace"),
-  Z.literal("accepted"),
-  Z.literal("pending_new"),
-  Z.literal("accepted_for_bidding"),
-  Z.literal("stopped"),
-  Z.literal("rejected"),
-  Z.literal("suspended"),
-  Z.literal("calculated"),
+export const OrderStatusSchema = Z.enum([
+  "new",
+  "partially_filled",
+  "filled",
+  "done_for_day",
+  "canceled",
+  "expired",
+  "replaced",
+  "pending_cancel",
+  "pending_replace",
+  "accepted",
+  "pending_new",
+  "accepted_for_bidding",
+  "stopped",
+  "rejected",
+  "suspended",
+  "calculated",
 ]);
 
 // TODO define
